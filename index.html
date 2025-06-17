@@ -4,393 +4,793 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login & Dashboard</title>
-    <!-- Login Styles -->
     <style>
-        /* Login styles */
-        body.login-view {
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
+        :root {
+            --primary-color: #af045a;
+            --primary-hover: #7c033e;
+            --secondary-color: #007bff;
+            --secondary-hover: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --warning-color: #ffc107;
+            --light-bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --border-color: #dee2e6;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+            --transition: all 0.3s ease;
+        }
+
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--light-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Login Styles */
+        .login-view {
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
+            padding: 20px;
         }
+
         .login-container {
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
+            border: 1px solid var(--border-color);
         }
-        h2 {
+
+        .login-header {
             text-align: center;
-            color: #333;
             margin-bottom: 2rem;
         }
+
+        .login-header h2 {
+            color: var(--primary-color);
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
         .input-group {
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
         }
-        input {
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .input-field {
             width: 100%;
-            padding: 0.8rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            padding: 12px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
             font-size: 1rem;
-            box-sizing: border-box;
-        }
-        .login-button {
-            width: 100%;
-            padding: 1rem;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        .login-button:hover {
-            background: #0056b3;
-        }
-        #adminLoginStatus {
-            text-align: center;
-            color: #dc3545;
-            margin-top: 1rem;
-        }
-    </style>
-    <!-- Dashboard Styles -->
-    <style>
-        /* Dashboard styles */
-        body.dashboard-view {
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 30px auto;
+            transition: var(--transition);
             background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            padding: 30px;
         }
-        h1 {
-            color: #af045a;
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(175, 4, 90, 0.1);
+        }
+
+        .input-field.error {
+            border-color: var(--error-color);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--secondary-hover);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-outline:hover:not(:disabled) {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        .status-message {
+            padding: 12px;
+            border-radius: var(--border-radius);
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .status-message.success {
+            background: rgba(40, 167, 69, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+
+        .status-message.error {
+            background: rgba(220, 53, 69, 0.1);
+            color: var(--error-color);
+            border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+
+        .status-message.warning {
+            background: rgba(255, 193, 7, 0.1);
+            color: #856404;
+            border: 1px solid rgba(255, 193, 7, 0.2);
+        }
+
+        /* Dashboard Styles */
+        .dashboard-view {
+            padding: 20px;
+        }
+
+        .dashboard-header {
+            background: var(--card-bg);
+            padding: 20px 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
             margin-bottom: 30px;
-        }
-        .admin-actions {
             display: flex;
+            justify-content: space-between;
+            align-items: center;
             flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .dashboard-title {
+            color: var(--primary-color);
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .admin-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
             gap: 30px;
         }
+
         .card {
-            background: #f9f9f9;
-            border-radius: 6px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-            padding: 24px;
-            flex: 1 1 350px;
-            min-width: 320px;
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 30px;
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
         }
-        .card h2 {
-            color: #1a022b;
-            margin-bottom: 18px;
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
         }
-        .card form {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+
+        .card-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--light-bg);
         }
-        .card label {
-            font-weight: bold;
+
+        .card-header h3 {
+            color: var(--primary-color);
+            font-size: 1.3rem;
+            font-weight: 600;
         }
-        .card input, .card select {
-            padding: 8px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
+
+        .card-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 5px;
         }
-        .card button {
-            background: #af045a;
-            color: #fff;
-            border: none;
-            padding: 10px 0;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-            margin-top: 10px;
+
+        .form-group {
+            margin-bottom: 20px;
         }
-        .card button:hover {
-            background: #7c033e;
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: var(--text-primary);
         }
-        .status {
-            margin-top: 10px;
-            color: green;
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
         }
-        .error {
-            color: red;
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .dashboard-header {
+                padding: 15px 20px;
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .dashboard-title {
+                font-size: 1.5rem;
+            }
+
+            .admin-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .login-container {
+                padding: 2rem;
+                margin: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .dashboard-view {
+                padding: 10px;
+            }
+
+            .login-container {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Accessibility improvements */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Animation for form submissions */
+        .card.submitting {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        /* Toast notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .toast {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 16px 20px;
+            margin-bottom: 10px;
+            border-left: 4px solid;
+            max-width: 400px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success {
+            border-left-color: var(--success-color);
+        }
+
+        .toast.error {
+            border-left-color: var(--error-color);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
     </style>
 </head>
-<body class="login-view">
+<body>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
     <!-- Login Section -->
-    <div id="loginSection">
+    <div id="loginSection" class="login-view">
         <div class="login-container">
-            <h2>Admin Login</h2>
-            <div class="input-group">
-                <input type="text" id="adminUsername" placeholder="Username" required>
+            <div class="login-header">
+                <h2>Admin Login</h2>
+                <p>Please sign in to access the dashboard</p>
             </div>
-            <div class="input-group">
-                <input type="password" id="adminPassword" placeholder="Password" required>
-            </div>
-            <button onclick="adminLogin()" type="button" class="login-button">Sign In</button>
-            <p id="adminLoginStatus"></p>
+            <form id="loginForm">
+                <div class="input-group">
+                    <label for="adminUsername">Username</label>
+                    <input type="text" id="adminUsername" class="input-field" placeholder="Enter your username" required autocomplete="username">
+                </div>
+                <div class="input-group">
+                    <label for="adminPassword">Password</label>
+                    <input type="password" id="adminPassword" class="input-field" placeholder="Enter your password" required autocomplete="current-password">
+                </div>
+                <button type="submit" id="loginBtn" class="btn btn-primary btn-full">
+                    <span id="loginBtnText">Sign In</span>
+                </button>
+                <div id="loginStatus" class="status-message"></div>
+            </form>
         </div>
     </div>
+
     <!-- Dashboard Section -->
     <div id="dashboardSection" style="display:none;">
         <div class="container">
-            <h1>Admin Dashboard</h1>
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">Admin Dashboard</h1>
+                <div class="user-info">
+                    <span>Welcome, <strong id="adminName">Admin</strong></span>
+                    <button onclick="logout()" class="btn btn-outline">Logout</button>
+                </div>
+            </div>
+
             <div class="admin-actions">
                 <!-- Register Student -->
                 <div class="card">
-                    <h2>Register Student</h2>
+                    <div class="card-header">
+                        <h3>Register Student</h3>
+                        <p>Add a new student to the system</p>
+                    </div>
                     <form id="registerStudentForm">
-                        <label>Name</label>
-                        <input type="text" id="studentName" required>
-                        <label>Registration Number</label>
-                        <input type="text" id="studentReg" required>
-                        <label>Course</label>
-                        <input type="text" id="studentCourse" required>
-                        <label>Year/Semester</label>
-                        <input type="text" id="studentYearSemester" required>
-                        <label>Password</label>
-                        <input type="password" id="studentPassword" required>
-                        <button type="submit">Register</button>
-                        <div class="status" id="registerStatus"></div>
+                        <div class="form-group">
+                            <label for="studentName">Full Name</label>
+                            <input type="text" id="studentName" class="input-field" placeholder="Enter student's full name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="studentReg">Registration Number</label>
+                            <input type="text" id="studentReg" class="input-field" placeholder="Enter registration number" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="studentCourse">Course</label>
+                            <input type="text" id="studentCourse" class="input-field" placeholder="Enter course name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="studentYearSemester">Year/Semester</label>
+                            <input type="text" id="studentYearSemester" class="input-field" placeholder="e.g., Year 2 Semester 1" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <span class="btn-text">Register Student</span>
+                        </button>
+                        <div class="status-message" id="registerStatus"></div>
                     </form>
                 </div>
+
                 <!-- Deregister Student -->
                 <div class="card">
-                    <h2>Deregister Student</h2>
+                    <div class="card-header">
+                        <h3>Deregister Student</h3>
+                        <p>Remove a student from the system</p>
+                    </div>
                     <form id="deregisterStudentForm">
-                        <label>Registration Number</label>
-                        <input type="text" id="deregStudentReg" required>
-                        <button type="submit">Deregister</button>
-                        <div class="status" id="deregisterStatus"></div>
+                        <div class="form-group">
+                            <label for="deregStudentReg">Registration Number</label>
+                            <input type="text" id="deregStudentReg" class="input-field" placeholder="Enter registration number" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <span class="btn-text">Deregister Student</span>
+                        </button>
+                        <div class="status-message" id="deregisterStatus"></div>
                     </form>
                 </div>
+
                 <!-- Register Units for Student -->
                 <div class="card">
-                    <h2>Register Units for Student</h2>
+                    <div class="card-header">
+                        <h3>Register Units</h3>
+                        <p>Register course units for a student</p>
+                    </div>
                     <form id="registerUnitsForm">
-                        <label>Registration Number</label>
-                        <input type="text" id="unitStudentReg" required>
-                        <label>Unit Name</label>
-                        <input type="text" id="unitName" required>
-                        <label>Unit Code</label>
-                        <input type="text" id="unitCode" required>
-                        <button type="submit">Register Unit</button>
-                        <div class="status" id="unitStatus"></div>
+                        <div class="form-group">
+                            <label for="unitStudentReg">Registration Number</label>
+                            <input type="text" id="unitStudentReg" class="input-field" placeholder="Enter registration number" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="unitName">Unit Name</label>
+                                <input type="text" id="unitName" class="input-field" placeholder="Enter unit name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="unitCode">Unit Code</label>
+                                <input type="text" id="unitCode" class="input-field" placeholder="Enter unit code" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <span class="btn-text">Register Unit</span>
+                        </button>
+                        <div class="status-message" id="unitStatus"></div>
                     </form>
                 </div>
+
                 <!-- Promote Student -->
                 <div class="card">
-                    <h2>Promote Student</h2>
+                    <div class="card-header">
+                        <h3>Promote Student</h3>
+                        <p>Promote student to next level</p>
+                    </div>
                     <form id="promoteStudentForm">
-                        <label>Registration Number</label>
-                        <input type="text" id="promoteStudentReg" required>
-                        <label>New Year/Semester</label>
-                        <input type="text" id="newYearSemester" required>
-                        <button type="submit">Promote</button>
-                        <div class="status" id="promoteStatus"></div>
+                        <div class="form-group">
+                            <label for="promoteStudentReg">Registration Number</label>
+                            <input type="text" id="promoteStudentReg" class="input-field" placeholder="Enter registration number" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newYearSemester">New Year/Semester</label>
+                            <input type="text" id="newYearSemester" class="input-field" placeholder="e.g., Year 3 Semester 1" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <span class="btn-text">Promote Student</span>
+                        </button>
+                        <div class="status-message" id="promoteStatus"></div>
                     </form>
                 </div>
+
                 <!-- Academic Leave -->
                 <div class="card">
-                    <h2>Academic Leave</h2>
+                    <div class="card-header">
+                        <h3>Academic Leave</h3>
+                        <p>Grant academic leave to a student</p>
+                    </div>
                     <form id="academicLeaveForm">
-                        <label>Registration Number</label>
-                        <input type="text" id="leaveStudentReg" required>
-                        <button type="submit">Give Academic Leave</button>
-                        <div class="status" id="leaveStatus"></div>
+                        <div class="form-group">
+                            <label for="leaveStudentReg">Registration Number</label>
+                            <input type="text" id="leaveStudentReg" class="input-field" placeholder="Enter registration number" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <span class="btn-text">Grant Academic Leave</span>
+                        </button>
+                        <div class="status-message" id="leaveStatus"></div>
                     </form>
                 </div>
+
                 <!-- Re-admit Student -->
                 <div class="card">
-                    <h2>Re-admit Student</h2>
+                    <div class="card-header">
+                        <h3>Re-admit Student</h3>
+                        <p>Re-admit a student from academic leave</p>
+                    </div>
                     <form id="readmitStudentForm">
-                        <label>Registration Number</label>
-                        <input type="text" id="readmitStudentReg" required>
-                        <button type="submit">Re-admit</button>
-                        <div class="status" id="readmitStatus"></div>
+                        <div class="form-group">
+                            <label for="readmitStudentReg">Registration Number</label>
+                            <input type="text" id="readmitStudentReg" class="input-field" placeholder="Enter registration number" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <span class="btn-text">Re-admit Student</span>
+                        </button>
+                        <div class="status-message" id="readmitStatus"></div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-    <!-- Combined Scripts -->
+
     <script>
-        // Toggle between login and dashboard
+        // Constants
+        const API_BASE_URL = 'https://clipsback-production.up.railway.app';
+        const ADMIN_TOKEN_KEY = 'adminToken';
+        const ADMIN_DATA_KEY = 'adminData';
+
+        // Utility functions
+        const showElement = (element) => element.style.display = 'block';
+        const hideElement = (element) => element.style.display = 'none';
+        const $ = (id) => document.getElementById(id);
+
+        // Toast notification system
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div style="font-weight: 500;">${type === 'success' ? '✓' : '✗'} ${type.charAt(0).toUpperCase() + type.slice(1)}</div>
+                <div style="margin-top: 4px; font-size: 0.9rem;">${message}</div>
+            `;
+            
+            $('toastContainer').appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Status message helper
+        function showStatus(elementId, message, type = 'success') {
+            const statusEl = $(elementId);
+            statusEl.textContent = message;
+            statusEl.className = `status-message ${type}`;
+            showElement(statusEl);
+            
+            setTimeout(() => {
+                statusEl.style.opacity = '0';
+                setTimeout(() => hideElement(statusEl), 300);
+            }, 5000);
+        }
+
+        // Loading state management
+        function setLoadingState(buttonId, isLoading, text = '') {
+            const btn = $(buttonId);
+            const btnText = btn.querySelector('.btn-text') || btn.querySelector('span');
+            
+            if (isLoading) {
+                btn.disabled = true;
+                btnText.innerHTML = '<div class="spinner"></div>Processing...';
+            } else {
+                btn.disabled = false;
+                btnText.textContent = text || btnText.textContent.replace('Processing...', '').trim();
+            }
+        }
+
+        // API request helper with better error handling
+        async function apiRequest(url, options = {}) {
+            try {
+                const token = localStorage.getItem(ADMIN_TOKEN_KEY);
+                const response = await fetch(`${API_BASE_URL}${url}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...(token && { 'Authorization': `Bearer ${token}` }),
+                        ...options.headers
+                    },
+                    ...options
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                return { success: true, data };
+            } catch (error) {
+                console.error('API Request failed:', error);
+                return { 
+                    success: false, 
+                    error: error.message.includes('Failed to fetch') 
+                        ? 'Network error. Please check your connection.' 
+                        : error.message 
+                };
+            }
+        }
+
+        // Authentication functions
+        async function adminLogin(event) {
+            event.preventDefault();
+            
+            const username = $('adminUsername').value.trim();
+            const password = $('adminPassword').value;
+            
+            if (!username || !password) {
+                showStatus('loginStatus', 'Please enter both username and password', 'error');
+                return;
+            }
+
+            setLoadingState('loginBtn', true);
+            
+            const result = await apiRequest('/auth/admin-login', {
+                method: 'POST',
+                body: JSON.stringify({ username, password })
+            });
+
+            setLoadingState('loginBtn', false, 'Sign In');
+
+            if (result.success && result.data.token) {
+                localStorage.setItem(ADMIN_TOKEN_KEY, result.data.token);
+                localStorage.setItem(ADMIN_DATA_KEY, JSON.stringify(result.data));
+                showDashboard();
+                showToast('Login successful! Welcome back.');
+            } else {
+                showStatus('loginStatus', result.data?.error || result.error || 'Login failed', 'error');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem(ADMIN_TOKEN_KEY);
+            localStorage.removeItem(ADMIN_DATA_KEY);
+            showLogin();
+            showToast('Logged out successfully', 'success');
+        }
+
+        // View management
         function showDashboard() {
-            document.body.className = 'dashboard-view';
-            document.getElementById('loginSection').style.display = 'none';
-            document.getElementById('dashboardSection').style.display = '';
+            hideElement($('loginSection'));
+            showElement($('dashboardSection'));
+            
+            // Load admin data if available
+            const adminData = JSON.parse(localStorage.getItem(ADMIN_DATA_KEY) || '{}');
+            if (adminData.username) {
+                $('adminName').textContent = adminData.username;
+            }
         }
+
         function showLogin() {
-            document.body.className = 'login-view';
-            document.getElementById('loginSection').style.display = '';
-            document.getElementById('dashboardSection').style.display = 'none';
+            showElement($('loginSection'));
+            hideElement($('dashboardSection'));
+            // Clear form
+            $('loginForm').reset();
         }
-        // On load, check if admin is logged in
-        window.onload = function() {
-            const adminToken = localStorage.getItem('adminToken');
+
+        // Form submission handlers
+        async function handleFormSubmission(formId, url, method = 'POST', successMessage = 'Operation completed successfully') {
+            const form = $(formId);
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Add loading state to the form
+            form.classList.add('submitting');
+            const submitBtn = form.querySelector('button[type="submit"]');
+            setLoadingState(submitBtn.id || 'submitBtn', true);
+            
+            const result = await apiRequest(url, {
+                method,
+                body: JSON.stringify(data)
+            });
+            
+            // Remove loading state
+            form.classList.remove('submitting');
+            setLoadingState(submitBtn.id || 'submitBtn', false);
+            
+            const statusElementId = form.querySelector('.status-message').id;
+            
+            if (result.success) {
+                showStatus(statusElementId, result.data.message || successMessage, 'success');
+                showToast(result.data.message || successMessage);
+                form.reset();
+            } else {
+                showStatus(statusElementId, result.data?.error || result.error, 'error');
+                showToast(result.data?.error || result.error, 'error');
+            }
+        }
+
+        // Initialize application
+        function initializeApp() {
+            // Check login status
+            const adminToken = localStorage.getItem(ADMIN_TOKEN_KEY);
             if (adminToken) {
                 showDashboard();
             } else {
                 showLogin();
             }
-        };
-        // Login logic (from original login page)
-        async function adminLogin() {
-            const username = document.getElementById('adminUsername').value;
-            const password = document.getElementById('adminPassword').value;
-            if (!username || !password) {
-                document.getElementById('adminLoginStatus').textContent = 'Please enter both username and password';
-                return;
-            }
-            try {
-                const res = await fetch('https://clipsback-production.up.railway.app/auth/admin-login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        username: username.trim(),
-                        password: password
-                    })
-                });
-                const data = await res.json();
-                if (data.token) {
-                    localStorage.setItem('adminToken', data.token);
-                    showDashboard();
-                } else {
-                    document.getElementById('adminLoginStatus').textContent = data.error || 'Login failed';
+
+            // Bind login form
+            $('loginForm').addEventListener('submit', adminLogin);
+
+            // Bind dashboard forms
+            const forms = [
+                { id: 'registerStudentForm', url: '/students', message: 'Student registered successfully!' },
+                { id: 'deregisterStudentForm', url: '/students', method: 'DELETE', message: 'Student deregistered successfully!' },
+                { id: 'registerUnitsForm', url: '/registered_units', message: 'Unit registered successfully!' },
+                { id: 'promoteStudentForm', url: '/admin/promote-student', message: 'Student promoted successfully!' },
+                { id: 'academicLeaveForm', url: '/admin/academic-leave', message: 'Academic leave granted successfully!' },
+                { id: 'readmitStudentForm', url: '/admin/readmit-student', message: 'Student re-admitted successfully!' }
+            ];
+
+            forms.forEach(({ id, url, method = 'POST', message }) => {
+                const form = $(id);
+                if (form) {
+                    form.addEventListener('submit', (event) => {
+                        event.preventDefault();
+                        handleFormSubmission(id, url, method, message);
+                    });
                 }
-            } catch (err) {
-                document.getElementById('adminLoginStatus').textContent = 'Network error. Please try again';
-            }
-        }
-        // Dashboard logic (from original dashboard page)
-        async function postData(url = '', data = {}) {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data),
             });
-            return response.json();
+
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', (event) => {
+                if (event.ctrlKey && event.key === 'l') {
+                    event.preventDefault();
+                    logout();
+                }
+            });
         }
-        // Register Student
-        document.addEventListener('DOMContentLoaded', function() {
-            const registerForm = document.getElementById('registerStudentForm');
-            if (registerForm) {
-                registerForm.onsubmit = async function(e) {
-                    e.preventDefault();
-                    const data = {
-                        registration_number: document.getElementById('studentReg').value,
-                        name: document.getElementById('studentName').value,
-                        course: document.getElementById('studentCourse').value,
-                        level_of_study: document.getElementById('studentYearSemester').value,
-                        photo_url: ''
-                    };
-                    const res = await postData('https://clipsback-production.up.railway.app/students', data);
-                    document.getElementById('registerStatus').textContent = res.message || res.error || 'Student registered!';
-                    document.getElementById('registerStatus').className = res.error ? 'status error' : 'status';
-                };
-            }
-            // Deregister Student
-            const deregisterForm = document.getElementById('deregisterStudentForm');
-            if (deregisterForm) {
-                deregisterForm.onsubmit = async function(e) {
-                    e.preventDefault();
-                    const reg_number = document.getElementById('deregStudentReg').value;
-                    const students = await fetch('https://clipsback-production.up.railway.app/students').then(r => r.json());
-                    const student = students.find(s => s.registration_number === reg_number);
-                    if (!student) {
-                        document.getElementById('deregisterStatus').textContent = 'Student not found';
-                        document.getElementById('deregisterStatus').className = 'status error';
-                        return;
-                    }
-                    const res = await fetch(`https://clipsback-production.up.railway.app/students/${student.id}`, { method: 'DELETE' });
-                    const data = await res.json();
-                    document.getElementById('deregisterStatus').textContent = data.message || data.error;
-                    document.getElementById('deregisterStatus').className = data.error ? 'status error' : 'status';
-                };
-            }
-            // Register Units
-            const registerUnitsForm = document.getElementById('registerUnitsForm');
-            if (registerUnitsForm) {
-                registerUnitsForm.onsubmit = async function(e) {
-                    e.preventDefault();
-                    const reg_number = document.getElementById('unitStudentReg').value;
-                    const students = await fetch('https://clipsback-production.up.railway.app/students').then(r => r.json());
-                    const student = students.find(s => s.registration_number === reg_number);
-                    if (!student) {
-                        document.getElementById('unitStatus').textContent = 'Student not found';
-                        document.getElementById('unitStatus').className = 'status error';
-                        return;
-                    }
-                    const data = {
-                        student_id: student.id,
-                        unit_name: document.getElementById('unitName').value,
-                        unit_code: document.getElementById('unitCode').value,
-                        status: 'registered'
-                    };
-                    const res = await postData('https://clipsback-production.up.railway.app/registered_units', data);
-                    document.getElementById('unitStatus').textContent = res.message || res.error || 'Unit registered!';
-                    document.getElementById('unitStatus').className = res.error ? 'status error' : 'status';
-                };
-            }
-            // Promote Student
-            const promoteForm = document.getElementById('promoteStudentForm');
-            if (promoteForm) {
-                promoteForm.onsubmit = async function(e) {
-                    e.preventDefault();
-                    const data = {
-                        reg_number: document.getElementById('promoteStudentReg').value,
-                        new_year_semester: document.getElementById('newYearSemester').value
-                    };
-                    const res = await postData('https://clipsback-production.up.railway.app/admin/promote-student', data);
-                    document.getElementById('promoteStatus').textContent = res.message || res.error;
-                    document.getElementById('promoteStatus').className = res.error ? 'status error' : 'status';
-                };
-            }
-            // Academic Leave
-            const academicLeaveForm = document.getElementById('academicLeaveForm');
-            if (academicLeaveForm) {
-                academicLeaveForm.onsubmit = async function(e) {
-                    e.preventDefault();
-                    const data = { reg_number: document.getElementById('leaveStudentReg').value };
-                    const res = await postData('https://clipsback-production.up.railway.app/admin/academic-leave', data);
-                    document.getElementById('leaveStatus').textContent = res.message || res.error;
-                    document.getElementById('leaveStatus').className = res.error ? 'status error' : 'status';
-                };
-            }
-            // Re-admit Student
-            const readmitForm = document.getElementById('readmitStudentForm');
-            if (readmitForm) {
-                readmitForm.onsubmit = async function(e) {
-                    e.preventDefault();
-                    const data = { reg_number: document.getElementById('readmitStudentReg').value };
-                    const res = await postData('https://clipsback-production.up.railway.app/admin/readmit-student', data);
-                    document.getElementById('readmitStatus').textContent = res.message || res.error;
-                    document.getElementById('readmitStatus').className = res.error ? 'status error' : 'status';
-                };
+
+        // Start the application
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+        // Handle page visibility change to check token validity
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                const token = localStorage.getItem(ADMIN_TOKEN_KEY);
+                if (!token && $('dashboardSection').style.display !== 'none') {
+                    showLogin();
+                }
             }
         });
     </script>
