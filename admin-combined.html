@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login & Dashboard</title>
+    <!-- Login Styles -->
+    <style>
+        /* Login styles */
+        body.login-view {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .login-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 2rem;
+        }
+        .input-group {
+            margin-bottom: 1rem;
+        }
+        input {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .login-button {
+            width: 100%;
+            padding: 1rem;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .login-button:hover {
+            background: #0056b3;
+        }
+        #adminLoginStatus {
+            text-align: center;
+            color: #dc3545;
+            margin-top: 1rem;
+        }
+    </style>
+    <!-- Dashboard Styles -->
+    <style>
+        /* Dashboard styles */
+        body.dashboard-view {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            color: #af045a;
+            margin-bottom: 30px;
+        }
+        .admin-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        .card {
+            background: #f9f9f9;
+            border-radius: 6px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+            padding: 24px;
+            flex: 1 1 350px;
+            min-width: 320px;
+        }
+        .card h2 {
+            color: #1a022b;
+            margin-bottom: 18px;
+        }
+        .card form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .card label {
+            font-weight: bold;
+        }
+        .card input, .card select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .card button {
+            background: #af045a;
+            color: #fff;
+            border: none;
+            padding: 10px 0;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .card button:hover {
+            background: #7c033e;
+        }
+        .status {
+            margin-top: 10px;
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body class="login-view">
+    <!-- Login Section -->
+    <div id="loginSection">
+        <div class="login-container">
+            <h2>Admin Login</h2>
+            <div class="input-group">
+                <input type="text" id="adminUsername" placeholder="Username" required>
+            </div>
+            <div class="input-group">
+                <input type="password" id="adminPassword" placeholder="Password" required>
+            </div>
+            <button onclick="adminLogin()" type="button" class="login-button">Sign In</button>
+            <p id="adminLoginStatus"></p>
+        </div>
+    </div>
+    <!-- Dashboard Section -->
+    <div id="dashboardSection" style="display:none;">
+        <div class="container">
+            <h1>Admin Dashboard</h1>
+            <div class="admin-actions">
+                <!-- Register Student -->
+                <div class="card">
+                    <h2>Register Student</h2>
+                    <form id="registerStudentForm">
+                        <label>Name</label>
+                        <input type="text" id="studentName" required>
+                        <label>Registration Number</label>
+                        <input type="text" id="studentReg" required>
+                        <label>Course</label>
+                        <input type="text" id="studentCourse" required>
+                        <label>Year/Semester</label>
+                        <input type="text" id="studentYearSemester" required>
+                        <label>Password</label>
+                        <input type="password" id="studentPassword" required>
+                        <button type="submit">Register</button>
+                        <div class="status" id="registerStatus"></div>
+                    </form>
+                </div>
+                <!-- Deregister Student -->
+                <div class="card">
+                    <h2>Deregister Student</h2>
+                    <form id="deregisterStudentForm">
+                        <label>Registration Number</label>
+                        <input type="text" id="deregStudentReg" required>
+                        <button type="submit">Deregister</button>
+                        <div class="status" id="deregisterStatus"></div>
+                    </form>
+                </div>
+                <!-- Register Units for Student -->
+                <div class="card">
+                    <h2>Register Units for Student</h2>
+                    <form id="registerUnitsForm">
+                        <label>Registration Number</label>
+                        <input type="text" id="unitStudentReg" required>
+                        <label>Unit Name</label>
+                        <input type="text" id="unitName" required>
+                        <label>Unit Code</label>
+                        <input type="text" id="unitCode" required>
+                        <button type="submit">Register Unit</button>
+                        <div class="status" id="unitStatus"></div>
+                    </form>
+                </div>
+                <!-- Promote Student -->
+                <div class="card">
+                    <h2>Promote Student</h2>
+                    <form id="promoteStudentForm">
+                        <label>Registration Number</label>
+                        <input type="text" id="promoteStudentReg" required>
+                        <label>New Year/Semester</label>
+                        <input type="text" id="newYearSemester" required>
+                        <button type="submit">Promote</button>
+                        <div class="status" id="promoteStatus"></div>
+                    </form>
+                </div>
+                <!-- Academic Leave -->
+                <div class="card">
+                    <h2>Academic Leave</h2>
+                    <form id="academicLeaveForm">
+                        <label>Registration Number</label>
+                        <input type="text" id="leaveStudentReg" required>
+                        <button type="submit">Give Academic Leave</button>
+                        <div class="status" id="leaveStatus"></div>
+                    </form>
+                </div>
+                <!-- Re-admit Student -->
+                <div class="card">
+                    <h2>Re-admit Student</h2>
+                    <form id="readmitStudentForm">
+                        <label>Registration Number</label>
+                        <input type="text" id="readmitStudentReg" required>
+                        <button type="submit">Re-admit</button>
+                        <div class="status" id="readmitStatus"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Combined Scripts -->
+    <script>
+        // Toggle between login and dashboard
+        function showDashboard() {
+            document.body.className = 'dashboard-view';
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('dashboardSection').style.display = '';
+        }
+        function showLogin() {
+            document.body.className = 'login-view';
+            document.getElementById('loginSection').style.display = '';
+            document.getElementById('dashboardSection').style.display = 'none';
+        }
+        // On load, check if admin is logged in
+        window.onload = function() {
+            const adminToken = localStorage.getItem('adminToken');
+            if (adminToken) {
+                showDashboard();
+            } else {
+                showLogin();
+            }
+        };
+        // Login logic (from original login page)
+        async function adminLogin() {
+            const username = document.getElementById('adminUsername').value;
+            const password = document.getElementById('adminPassword').value;
+            if (!username || !password) {
+                document.getElementById('adminLoginStatus').textContent = 'Please enter both username and password';
+                return;
+            }
+            try {
+                const res = await fetch('https://clipsback-production.up.railway.app/auth/admin-login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username.trim(),
+                        password: password
+                    })
+                });
+                const data = await res.json();
+                if (data.token) {
+                    localStorage.setItem('adminToken', data.token);
+                    showDashboard();
+                } else {
+                    document.getElementById('adminLoginStatus').textContent = data.error || 'Login failed';
+                }
+            } catch (err) {
+                document.getElementById('adminLoginStatus').textContent = 'Network error. Please try again';
+            }
+        }
+        // Dashboard logic (from original dashboard page)
+        async function postData(url = '', data = {}) {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data),
+            });
+            return response.json();
+        }
+        // Register Student
+        document.addEventListener('DOMContentLoaded', function() {
+            const registerForm = document.getElementById('registerStudentForm');
+            if (registerForm) {
+                registerForm.onsubmit = async function(e) {
+                    e.preventDefault();
+                    const data = {
+                        registration_number: document.getElementById('studentReg').value,
+                        name: document.getElementById('studentName').value,
+                        course: document.getElementById('studentCourse').value,
+                        level_of_study: document.getElementById('studentYearSemester').value,
+                        photo_url: ''
+                    };
+                    const res = await postData('https://clipsback-production.up.railway.app/students', data);
+                    document.getElementById('registerStatus').textContent = res.message || res.error || 'Student registered!';
+                    document.getElementById('registerStatus').className = res.error ? 'status error' : 'status';
+                };
+            }
+            // Deregister Student
+            const deregisterForm = document.getElementById('deregisterStudentForm');
+            if (deregisterForm) {
+                deregisterForm.onsubmit = async function(e) {
+                    e.preventDefault();
+                    const reg_number = document.getElementById('deregStudentReg').value;
+                    const students = await fetch('https://clipsback-production.up.railway.app/students').then(r => r.json());
+                    const student = students.find(s => s.registration_number === reg_number);
+                    if (!student) {
+                        document.getElementById('deregisterStatus').textContent = 'Student not found';
+                        document.getElementById('deregisterStatus').className = 'status error';
+                        return;
+                    }
+                    const res = await fetch(`https://clipsback-production.up.railway.app/students/${student.id}`, { method: 'DELETE' });
+                    const data = await res.json();
+                    document.getElementById('deregisterStatus').textContent = data.message || data.error;
+                    document.getElementById('deregisterStatus').className = data.error ? 'status error' : 'status';
+                };
+            }
+            // Register Units
+            const registerUnitsForm = document.getElementById('registerUnitsForm');
+            if (registerUnitsForm) {
+                registerUnitsForm.onsubmit = async function(e) {
+                    e.preventDefault();
+                    const reg_number = document.getElementById('unitStudentReg').value;
+                    const students = await fetch('https://clipsback-production.up.railway.app/students').then(r => r.json());
+                    const student = students.find(s => s.registration_number === reg_number);
+                    if (!student) {
+                        document.getElementById('unitStatus').textContent = 'Student not found';
+                        document.getElementById('unitStatus').className = 'status error';
+                        return;
+                    }
+                    const data = {
+                        student_id: student.id,
+                        unit_name: document.getElementById('unitName').value,
+                        unit_code: document.getElementById('unitCode').value,
+                        status: 'registered'
+                    };
+                    const res = await postData('https://clipsback-production.up.railway.app/registered_units', data);
+                    document.getElementById('unitStatus').textContent = res.message || res.error || 'Unit registered!';
+                    document.getElementById('unitStatus').className = res.error ? 'status error' : 'status';
+                };
+            }
+            // Promote Student
+            const promoteForm = document.getElementById('promoteStudentForm');
+            if (promoteForm) {
+                promoteForm.onsubmit = async function(e) {
+                    e.preventDefault();
+                    const data = {
+                        reg_number: document.getElementById('promoteStudentReg').value,
+                        new_year_semester: document.getElementById('newYearSemester').value
+                    };
+                    const res = await postData('https://clipsback-production.up.railway.app/admin/promote-student', data);
+                    document.getElementById('promoteStatus').textContent = res.message || res.error;
+                    document.getElementById('promoteStatus').className = res.error ? 'status error' : 'status';
+                };
+            }
+            // Academic Leave
+            const academicLeaveForm = document.getElementById('academicLeaveForm');
+            if (academicLeaveForm) {
+                academicLeaveForm.onsubmit = async function(e) {
+                    e.preventDefault();
+                    const data = { reg_number: document.getElementById('leaveStudentReg').value };
+                    const res = await postData('https://clipsback-production.up.railway.app/admin/academic-leave', data);
+                    document.getElementById('leaveStatus').textContent = res.message || res.error;
+                    document.getElementById('leaveStatus').className = res.error ? 'status error' : 'status';
+                };
+            }
+            // Re-admit Student
+            const readmitForm = document.getElementById('readmitStudentForm');
+            if (readmitForm) {
+                readmitForm.onsubmit = async function(e) {
+                    e.preventDefault();
+                    const data = { reg_number: document.getElementById('readmitStudentReg').value };
+                    const res = await postData('https://clipsback-production.up.railway.app/admin/readmit-student', data);
+                    document.getElementById('readmitStatus').textContent = res.message || res.error;
+                    document.getElementById('readmitStatus').className = res.error ? 'status error' : 'status';
+                };
+            }
+        });
+    </script>
+</body>
+</html>
