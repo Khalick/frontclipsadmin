@@ -881,7 +881,7 @@
         const ADMIN_TOKEN_KEY = 'adminToken';
         const ADMIN_DATA_KEY = 'adminData';
         
-        // CORS proxy configuration for local development
+        // CORS proxy configuration for development & production
         // List of available CORS proxies - we'll try them in order
         const CORS_PROXIES = [
             { 
@@ -898,6 +898,11 @@
                 url: 'https://api.allorigins.win/raw?url=',
                 demo: 'https://allorigins.win/',
                 name: 'All Origins'
+            },
+            {
+                url: 'https://cors.bridged.cc/',
+                demo: 'https://cors.bridged.cc/',
+                name: 'CORS Bridged'
             }
         ];
         
@@ -905,6 +910,9 @@
         let currentProxyIndex = 0;
         const CORS_PROXY_URL = CORS_PROXIES[currentProxyIndex].url;
         const CORS_PROXY_DEMO_URL = CORS_PROXIES[currentProxyIndex].demo;
+        
+        // Known production origins that need CORS handling
+        const PRODUCTION_ORIGINS = ['https://studentportaladmin.netlify.app'];
 
         // Utility functions
         const showElement = (element) => element.style.display = 'block';
@@ -916,6 +924,12 @@
                                  window.location.origin === 'null' || 
                                  window.location.hostname === 'localhost' ||
                                  window.location.hostname === '127.0.0.1';
+                                 
+        // Check if we're running on a known production domain that has CORS issues
+        const isProductionWithCorsIssues = PRODUCTION_ORIGINS.includes(window.location.origin);
+        
+        // Flag to use CORS proxy for all requests
+        let useCorsProxyForAll = isLocalEnvironment || isProductionWithCorsIssues;
         
         // Remove duplicate event listener warning that was causing issues
         // All CORS warnings now handled in the initializeApp function
@@ -1023,11 +1037,12 @@
                                          window.location.hostname === 'localhost' ||
                                          window.location.hostname === '127.0.0.1';
                 
-                // Use CORS proxy for local development
+                // Set up API URL - with CORS proxy if needed
                 let apiUrl = `${API_BASE_URL}${url}`;
                 
-                if (isLocalEnvironment) {
+                if (useCorsProxyForAll) {
                     const currentProxy = CORS_PROXIES[currentProxyIndex];
+                    const environment = isLocalEnvironment ? "local development" : "production";
                     
                     // Handle different proxy URL formats
                     if (currentProxy.url.includes('?url=')) {
@@ -1038,7 +1053,7 @@
                         apiUrl = `${currentProxy.url}${API_BASE_URL}${url}`;
                     }
                     
-                    console.log(`Using ${currentProxy.name} proxy for local development: ${apiUrl}`);
+                    console.log(`Using ${currentProxy.name} proxy for ${environment}: ${apiUrl}`);
                     console.log(`Note: If this fails, try requesting access at: ${currentProxy.demo}`);
                 }
                 
@@ -1084,7 +1099,19 @@
                 console.error('API Request failed:', error);
                 
                 // More detailed error handling
-                if (isLocalEnvironment && (error.message.includes('Failed to fetch') || error.message.includes('CORS') || error.message.includes('Forbidden') || error.message.includes('corsdemo'))) {
+                // Handle CORS-related errors in both local and production environments
+                if ((useCorsProxyForAll || error.message.includes('CORS')) && 
+                    (error.message.includes('Failed to fetch') || error.message.includes('CORS') || 
+                     error.message.includes('Forbidden') || error.message.includes('corsdemo'))) {
+                    
+                    // First time we encounter a CORS error in production, start using proxies
+                    if (!useCorsProxyForAll && PRODUCTION_ORIGINS.includes(window.location.origin)) {
+                        useCorsProxyForAll = true;
+                        console.log('CORS issue detected in production, enabling proxy for future requests');
+                        // Try again with proxy enabled
+                        return await apiRequest(url, options);
+                    }
+                    
                     // Try the next proxy before returning an error
                     currentProxyIndex = (currentProxyIndex + 1) % CORS_PROXIES.length;
                     
@@ -1105,12 +1132,14 @@
                         `<a href="${p.demo}" target="_blank" style="color: white; text-decoration: underline;">${p.name}</a>`
                     ).join(', ');
                     
+                    const environment = isLocalEnvironment ? "local" : "production";
+                    
                     return { 
                         success: false, 
-                        error: `CORS Error: Unable to access the server from your local environment. Try one of these options:<br>
+                        error: `CORS Error: Unable to access the server from your ${environment} environment. Try one of these options:<br>
                         1. Request temporary access to a CORS proxy: ${proxyLinks}<br>
-                        2. Host this page on a proper web server<br>
-                        3. Use a browser extension that disables CORS`
+                        2. Contact the backend administrator to enable CORS for ${window.location.origin}<br>
+                        3. Use a browser extension that disables CORS (for testing only)`
                     };
                 } else if (error.message.includes('Failed to fetch')) {
                     return { 
@@ -1274,7 +1303,43 @@
 
         // Check if the CORS proxy is working (for local development)
         async function checkCorsProxyAccess() {
-            if (isLocalEnvironment) {
+            if (isLocalEnvironment || isProductionWithCorsIssues) {
+                const environment = isLocalEnvironment ? "local" : "production";
+                
+                // First, try a direct connection without proxy to confirm if CORS is the issue
+                if (isProductionWithCorsIssues) {
+                    try {
+                        console.log('Attempting direct connection to backend to check CORS status...');
+                        
+                        // Create an AbortController to limit the fetch time
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 5000);
+                        
+                        const directResponse = await fetch(`${API_BASE_URL}/ping`, {
+                            method: 'GET',
+                            headers: { 
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Origin': window.location.origin
+                            },
+                            signal: controller.signal
+                        });
+                        
+                        clearTimeout(timeoutId);
+                        
+                        if (directResponse.ok) {
+                            console.log('Direct connection successful! No CORS proxy needed.');
+                            showToast('Direct connection to backend is working. No CORS proxy needed!', 'success');
+                            useCorsProxyForAll = false;
+                            return true;
+                        }
+                    } catch (error) {
+                        console.log('Direct connection failed. Confirming CORS issue...');
+                        if (error.name === 'AbortError') {
+                            console.log('Request timed out, likely due to CORS preflight failure');
+                        }
+                    }
+                }
+                
                 // Try each proxy in order until one works
                 for (let i = 0; i < CORS_PROXIES.length; i++) {
                     const proxy = CORS_PROXIES[i];
@@ -1297,6 +1362,7 @@
                             console.log(`CORS proxy (${proxy.name}) is working correctly`);
                             showToast(`CORS proxy (${proxy.name}) connection successful!`, 'success');
                             currentProxyIndex = i; // Set this as the current proxy
+                            useCorsProxyForAll = true;
                             return true;
                         } else {
                             console.warn(`CORS proxy (${proxy.name}) returned error status: ${response.status}`);
@@ -1311,10 +1377,19 @@
                     `<a href="${p.demo}" target="_blank" style="color: white; text-decoration: underline;">${p.name}</a>`
                 ).join(', ');
                 
-                showToast(`CORS proxy connections failed. Try requesting access at: ${links}<br>Or add this extension: <a href="https://chrome.google.com/webstore/detail/cors-unblock/lfhmikememgdcahcdlaciloancbhjino" target="_blank" style="color: white; text-decoration: underline;">CORS Unblock</a>`, 'error');
+                if (isLocalEnvironment) {
+                    showToast(`CORS proxy connections failed. Try requesting access at: ${links}<br>Or add this extension: <a href="https://chrome.google.com/webstore/detail/cors-unblock/lfhmikememgdcahcdlaciloancbhjino" target="_blank" style="color: white; text-decoration: underline;">CORS Unblock</a>`, 'error');
+                } else {
+                    showToast(`
+                        <strong>Connection Error</strong><br>
+                        Unable to connect to the backend from ${window.location.origin}.<br>
+                        Please contact the administrator to add this domain to the backend's CORS allowed origins:<br>
+                        <code style="background: rgba(255,255,255,0.2); padding: 4px; display: block; margin-top: 5px;">Access-Control-Allow-Origin: ${window.location.origin}</code>
+                    `, 'error');
+                }
                 return false;
             }
-            return true; // Not in local environment, no proxy needed
+            return true; // No CORS issues expected
         }
         
         // Initialize application
@@ -1331,9 +1406,10 @@
                 document.body.classList.add('auto-dark-mode');
             }
             
-            // Check if we're running in local environment and show warning
-            if (isLocalEnvironment) {
-                console.log('Running in local environment. CORS proxy may be required.');
+            // Check if we're running in an environment that might need CORS help
+            if (isLocalEnvironment || isProductionWithCorsIssues) {
+                const environment = isLocalEnvironment ? "local" : "production";
+                console.log(`Running in ${environment} environment. CORS proxy may be required.`);
                 
                 // Add a special button in the top right for CORS help
                 const corsHelpBtn = document.createElement('button');
@@ -1347,19 +1423,34 @@
                 corsHelpBtn.style.opacity = '0.9';
                 corsHelpBtn.innerHTML = '<i class="fas fa-shield-alt" style="margin-right: 8px;"></i>Fix CORS Issues';
                 corsHelpBtn.onclick = function() {
-                    showToast(`
-                        <strong>CORS Issues Detected</strong><br>
-                        Try these options:<br>
-                        1. <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank" style="color: white; text-decoration: underline;">CORS Anywhere</a><br>
-                        2. <a href="https://corsproxy.io/" target="_blank" style="color: white; text-decoration: underline;">CORS Proxy IO</a><br>
-                        3. <a href="https://chrome.google.com/webstore/detail/cors-unblock/lfhmikememgdcahcdlaciloancbhjino" target="_blank" style="color: white; text-decoration: underline;">Install CORS Unblock Extension</a><br>
-                        4. Try using a local web server
-                    `, 'warning');
+                    if (isLocalEnvironment) {
+                        showToast(`
+                            <strong>CORS Issues Detected</strong><br>
+                            Try these options:<br>
+                            1. <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank" style="color: white; text-decoration: underline;">CORS Anywhere</a><br>
+                            2. <a href="https://corsproxy.io/" target="_blank" style="color: white; text-decoration: underline;">CORS Proxy IO</a><br>
+                            3. <a href="https://chrome.google.com/webstore/detail/cors-unblock/lfhmikememgdcahcdlaciloancbhjino" target="_blank" style="color: white; text-decoration: underline;">Install CORS Unblock Extension</a><br>
+                            4. Try using a local web server
+                        `, 'warning');
+                    } else {
+                        showToast(`
+                            <strong>CORS Issues Detected</strong><br>
+                            Your deployed site at ${window.location.origin} cannot access the backend directly.<br>
+                            Try these options:<br>
+                            1. <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank" style="color: white; text-decoration: underline;">Request CORS Anywhere access</a><br>
+                            2. Contact the backend administrator to add this origin to their CORS allowed origins list:<br>
+                            <code style="background: rgba(255,255,255,0.2); padding: 4px; display: block; margin-top: 5px;">Access-Control-Allow-Origin: ${window.location.origin}</code>
+                        `, 'warning');
+                    }
                 };
                 document.body.appendChild(corsHelpBtn);
                 
                 setTimeout(() => {
-                    showToast(`Running locally: Testing CORS proxies to find the best option...`, 'warning');
+                    if (isLocalEnvironment) {
+                        showToast(`Running locally: Testing CORS proxies to find the best option...`, 'warning');
+                    } else {
+                        showToast(`CORS issue detected between ${window.location.origin} and the backend. Testing proxies...`, 'warning');
+                    }
                     setTimeout(() => {
                         checkCorsProxyAccess();
                     }, 1500);
