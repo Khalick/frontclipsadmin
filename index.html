@@ -669,6 +669,53 @@
                     <span id="loginBtnText">Sign In</span>
                 </button>
                 <div id="loginStatus" class="status-message" style="text-align: left;"></div>
+                
+                <div id="corsHelp" style="display: none; margin-top: 20px; padding: 15px; border-radius: 8px; background-color: rgba(94, 96, 206, 0.05); border: 1px dashed var(--secondary-color);">
+                    <h4 style="margin-bottom: 10px; color: var(--text-primary);"><i class="fas fa-info-circle" style="margin-right: 8px; color: var(--secondary-color);"></i>Running Locally?</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 10px;">
+                        You're running this page directly from your file system, which can cause CORS errors. Here are ways to solve this:
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div>
+                            <p style="font-size: 0.9rem; font-weight: 600; margin-bottom: 5px;">Option 1: Use a CORS proxy</p>
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank" class="btn btn-outline" style="font-size: 0.8rem; padding: 8px 12px;">
+                                    <i class="fas fa-external-link-alt" style="margin-right: 8px;"></i>CORS Anywhere
+                                </a>
+                                <a href="https://corsproxy.io/" target="_blank" class="btn btn-outline" style="font-size: 0.8rem; padding: 8px 12px;">
+                                    <i class="fas fa-external-link-alt" style="margin-right: 8px;"></i>CORS Proxy IO
+                                </a>
+                                <a href="https://allorigins.win/" target="_blank" class="btn btn-outline" style="font-size: 0.8rem; padding: 8px 12px;">
+                                    <i class="fas fa-external-link-alt" style="margin-right: 8px;"></i>All Origins
+                                </a>
+                            </div>
+                        </div>
+                        <div>
+                            <p style="font-size: 0.9rem; font-weight: 600; margin-bottom: 5px;">Option 2: Use a browser extension</p>
+                            <a href="https://chrome.google.com/webstore/detail/cors-unblock/lfhmikememgdcahcdlaciloancbhjino" target="_blank" class="btn btn-outline" style="font-size: 0.8rem; padding: 8px 12px;">
+                                <i class="fas fa-puzzle-piece" style="margin-right: 8px;"></i>CORS Unblock Extension
+                            </a>
+                        </div>
+                        <div>
+                            <p style="font-size: 0.9rem; font-weight: 600; margin-bottom: 5px;">Option 3: Use a local web server</p>
+                            <p style="font-size: 0.8rem; color: var(--text-secondary);">
+                                Open a terminal, navigate to this folder and run:
+                                <code style="background: #f0f0f0; padding: 2px 4px; border-radius: 4px; font-family: monospace;">python -m http.server</code>
+                                then visit <code style="background: #f0f0f0; padding: 2px 4px; border-radius: 4px; font-family: monospace;">http://localhost:8000</code>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <script>
+                    // Show CORS help info if running locally
+                    if (window.location.protocol === 'file:' || 
+                       window.location.origin === 'null' || 
+                       window.location.hostname === 'localhost' ||
+                       window.location.hostname === '127.0.0.1') {
+                        document.getElementById('corsHelp').style.display = 'block';
+                    }
+                </script>
             </form>
         </div>
     </div>
@@ -830,14 +877,48 @@
 
     <script>
         // Constants
-        const API_BASE_URL = 'http://localhost:3000'; // Uses current server origin
+        const API_BASE_URL = 'https://clipscollegebackend.netlify.app'; // Uses current server origin
         const ADMIN_TOKEN_KEY = 'adminToken';
         const ADMIN_DATA_KEY = 'adminData';
+        
+        // CORS proxy configuration for local development
+        // List of available CORS proxies - we'll try them in order
+        const CORS_PROXIES = [
+            { 
+                url: 'https://cors-anywhere.herokuapp.com/', 
+                demo: 'https://cors-anywhere.herokuapp.com/corsdemo',
+                name: 'CORS Anywhere'
+            },
+            { 
+                url: 'https://corsproxy.io/?', 
+                demo: 'https://corsproxy.io/',
+                name: 'CORS Proxy IO'
+            },
+            {
+                url: 'https://api.allorigins.win/raw?url=',
+                demo: 'https://allorigins.win/',
+                name: 'All Origins'
+            }
+        ];
+        
+        // Default to first proxy
+        let currentProxyIndex = 0;
+        const CORS_PROXY_URL = CORS_PROXIES[currentProxyIndex].url;
+        const CORS_PROXY_DEMO_URL = CORS_PROXIES[currentProxyIndex].demo;
 
         // Utility functions
         const showElement = (element) => element.style.display = 'block';
         const hideElement = (element) => element.style.display = 'none';
         const $ = (id) => document.getElementById(id);
+        
+        // Check if running in local environment
+        const isLocalEnvironment = window.location.protocol === 'file:' || 
+                                 window.location.origin === 'null' || 
+                                 window.location.hostname === 'localhost' ||
+                                 window.location.hostname === '127.0.0.1';
+        
+        // Remove duplicate event listener warning that was causing issues
+        // All CORS warnings now handled in the initializeApp function
 
         // Toast notification system
         function showToast(message, type = 'success') {
@@ -931,35 +1012,122 @@
             }
         }
 
-        // API request helper with better error handling
+        // API request helper with CORS proxy for local development
         async function apiRequest(url, options = {}) {
             try {
                 const token = localStorage.getItem(ADMIN_TOKEN_KEY);
-                const response = await fetch(`${API_BASE_URL}${url}`, {
+                
+                // Determine if we're running locally
+                const isLocalEnvironment = window.location.protocol === 'file:' || 
+                                         window.location.origin === 'null' || 
+                                         window.location.hostname === 'localhost' ||
+                                         window.location.hostname === '127.0.0.1';
+                
+                // Use CORS proxy for local development
+                let apiUrl = `${API_BASE_URL}${url}`;
+                
+                if (isLocalEnvironment) {
+                    const currentProxy = CORS_PROXIES[currentProxyIndex];
+                    
+                    // Handle different proxy URL formats
+                    if (currentProxy.url.includes('?url=')) {
+                        // For proxies that use ?url= parameter format
+                        apiUrl = `${currentProxy.url}${encodeURIComponent(API_BASE_URL + url)}`;
+                    } else {
+                        // For proxies that use direct concatenation
+                        apiUrl = `${currentProxy.url}${API_BASE_URL}${url}`;
+                    }
+                    
+                    console.log(`Using ${currentProxy.name} proxy for local development: ${apiUrl}`);
+                    console.log(`Note: If this fails, try requesting access at: ${currentProxy.demo}`);
+                }
+                
+                // Setup request options with appropriate headers
+                const requestConfig = {
+                    mode: 'cors',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
                         ...(token && { 'Authorization': `Bearer ${token}` }),
                         ...options.headers
                     },
                     ...options
-                });
+                };
 
-                const data = await response.json();
+                // Use the cors-anywhere service as a proxy when testing locally
+                console.log(`Making API request to: ${apiUrl}`);
+                const response = await fetch(apiUrl, requestConfig);
+
+                // Handle different content types
+                let data;
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    data = await response.json();
+                } else {
+                    const text = await response.text();
+                    try {
+                        // Try to parse as JSON anyway in case the content-type header is incorrect
+                        data = JSON.parse(text);
+                    } catch (e) {
+                        // If it's not parseable as JSON, use the text directly
+                        data = { message: text };
+                    }
+                }
                 
                 if (!response.ok) {
-                    throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+                    throw new Error(data.error || data.message || `HTTP ${response.status}: ${response.statusText}`);
                 }
 
                 return { success: true, data };
             } catch (error) {
                 console.error('API Request failed:', error);
-                return { 
-                    success: false, 
-                    error: error.message.includes('Failed to fetch') 
-                        ? 'Network error. Please check your connection.' 
-                        : error.message 
-                };
+                
+                // More detailed error handling
+                if (isLocalEnvironment && (error.message.includes('Failed to fetch') || error.message.includes('CORS') || error.message.includes('Forbidden') || error.message.includes('corsdemo'))) {
+                    // Try the next proxy before returning an error
+                    currentProxyIndex = (currentProxyIndex + 1) % CORS_PROXIES.length;
+                    
+                    if (options._retryCount === undefined) {
+                        options._retryCount = 0;
+                    }
+                    
+                    // Only retry a reasonable number of times
+                    if (options._retryCount < CORS_PROXIES.length) {
+                        options._retryCount++;
+                        console.log(`CORS proxy error. Trying next proxy (${CORS_PROXIES[currentProxyIndex].name})...`);
+                        // Retry the request with the next proxy
+                        return await apiRequest(url, options);
+                    }
+                    
+                    // All proxies failed, show comprehensive error message with all options
+                    let proxyLinks = CORS_PROXIES.map(p => 
+                        `<a href="${p.demo}" target="_blank" style="color: white; text-decoration: underline;">${p.name}</a>`
+                    ).join(', ');
+                    
+                    return { 
+                        success: false, 
+                        error: `CORS Error: Unable to access the server from your local environment. Try one of these options:<br>
+                        1. Request temporary access to a CORS proxy: ${proxyLinks}<br>
+                        2. Host this page on a proper web server<br>
+                        3. Use a browser extension that disables CORS`
+                    };
+                } else if (error.message.includes('Failed to fetch')) {
+                    return { 
+                        success: false, 
+                        error: 'Network error: Unable to connect to the server. Please check your internet connection or try again later.'
+                    };
+                } else if (error.message.includes('CORS')) {
+                    return {
+                        success: false,
+                        error: 'CORS Error: The server doesn\'t allow requests from this origin.'
+                    };
+                } else {
+                    return { 
+                        success: false, 
+                        error: error.message
+                    };
+                }
             }
         }
 
@@ -1104,11 +1272,98 @@
             }
         }
 
+        // Check if the CORS proxy is working (for local development)
+        async function checkCorsProxyAccess() {
+            if (isLocalEnvironment) {
+                // Try each proxy in order until one works
+                for (let i = 0; i < CORS_PROXIES.length; i++) {
+                    const proxy = CORS_PROXIES[i];
+                    try {
+                        // Handle different proxy URL formats
+                        let testUrl;
+                        if (proxy.url.includes('?url=')) {
+                            testUrl = `${proxy.url}${encodeURIComponent(API_BASE_URL + '/ping')}`;
+                        } else {
+                            testUrl = `${proxy.url}${API_BASE_URL}/ping`;
+                        }
+                        
+                        console.log(`Testing CORS proxy (${proxy.name}): ${testUrl}`);
+                        const response = await fetch(testUrl, {
+                            method: 'GET',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+                        
+                        if (response.ok) {
+                            console.log(`CORS proxy (${proxy.name}) is working correctly`);
+                            showToast(`CORS proxy (${proxy.name}) connection successful!`, 'success');
+                            currentProxyIndex = i; // Set this as the current proxy
+                            return true;
+                        } else {
+                            console.warn(`CORS proxy (${proxy.name}) returned error status: ${response.status}`);
+                        }
+                    } catch (error) {
+                        console.error(`CORS proxy (${proxy.name}) connection failed:`, error);
+                    }
+                }
+                
+                // If we get here, all proxies failed
+                const links = CORS_PROXIES.map(p => 
+                    `<a href="${p.demo}" target="_blank" style="color: white; text-decoration: underline;">${p.name}</a>`
+                ).join(', ');
+                
+                showToast(`CORS proxy connections failed. Try requesting access at: ${links}<br>Or add this extension: <a href="https://chrome.google.com/webstore/detail/cors-unblock/lfhmikememgdcahcdlaciloancbhjino" target="_blank" style="color: white; text-decoration: underline;">CORS Unblock</a>`, 'error');
+                return false;
+            }
+            return true; // Not in local environment, no proxy needed
+        }
+        
         // Initialize application
         function initializeApp() {
+            // Create toast container if it doesn't exist
+            if (!$('toastContainer')) {
+                const toastContainer = document.createElement('div');
+                toastContainer.id = 'toastContainer';
+                document.body.appendChild(toastContainer);
+            }
+            
             // Add auto dark mode class to body if user's system prefers dark mode
             if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
                 document.body.classList.add('auto-dark-mode');
+            }
+            
+            // Check if we're running in local environment and show warning
+            if (isLocalEnvironment) {
+                console.log('Running in local environment. CORS proxy may be required.');
+                
+                // Add a special button in the top right for CORS help
+                const corsHelpBtn = document.createElement('button');
+                corsHelpBtn.className = 'btn btn-secondary';
+                corsHelpBtn.style.position = 'fixed';
+                corsHelpBtn.style.top = '10px';
+                corsHelpBtn.style.right = '10px';
+                corsHelpBtn.style.zIndex = '10000';
+                corsHelpBtn.style.padding = '8px 12px';
+                corsHelpBtn.style.fontSize = '0.8rem';
+                corsHelpBtn.style.opacity = '0.9';
+                corsHelpBtn.innerHTML = '<i class="fas fa-shield-alt" style="margin-right: 8px;"></i>Fix CORS Issues';
+                corsHelpBtn.onclick = function() {
+                    showToast(`
+                        <strong>CORS Issues Detected</strong><br>
+                        Try these options:<br>
+                        1. <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank" style="color: white; text-decoration: underline;">CORS Anywhere</a><br>
+                        2. <a href="https://corsproxy.io/" target="_blank" style="color: white; text-decoration: underline;">CORS Proxy IO</a><br>
+                        3. <a href="https://chrome.google.com/webstore/detail/cors-unblock/lfhmikememgdcahcdlaciloancbhjino" target="_blank" style="color: white; text-decoration: underline;">Install CORS Unblock Extension</a><br>
+                        4. Try using a local web server
+                    `, 'warning');
+                };
+                document.body.appendChild(corsHelpBtn);
+                
+                setTimeout(() => {
+                    showToast(`Running locally: Testing CORS proxies to find the best option...`, 'warning');
+                    setTimeout(() => {
+                        checkCorsProxyAccess();
+                    }, 1500);
+                }, 1000);
             }
             
             // Check login status
