@@ -4,23 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login & Dashboard</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         :root {
-            --primary-color: #af045a;
-            --primary-hover: #7c033e;
-            --secondary-color: #007bff;
-            --secondary-hover: #0056b3;
-            --success-color: #28a745;
-            --error-color: #dc3545;
-            --warning-color: #ffc107;
+            --primary-color: #5e60ce;
+            --primary-hover: #4647b8;
+            --secondary-color: #64dfdf;
+            --secondary-hover: #48b2b2;
+            --gradient-primary: linear-gradient(135deg, #5e60ce, #6930c3);
+            --success-color: #38b000;
+            --error-color: #e63946;
+            --warning-color: #fb8500;
             --light-bg: #f8f9fa;
+            --dark-bg: #212529;
             --card-bg: #ffffff;
-            --border-color: #dee2e6;
-            --text-primary: #212529;
+            --border-color: #e2e8f0;
+            --text-primary: #1a1a2e;
             --text-secondary: #6c757d;
-            --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            --border-radius: 8px;
-            --transition: all 0.3s ease;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 6px 24px rgba(0, 0, 0, 0.12);
+            --shadow-inset: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+            --border-radius: 12px;
+            --btn-radius: 8px;
+            --transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            --header-height: 70px;
         }
 
         * {
@@ -30,27 +38,45 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: var(--light-bg);
             color: var(--text-primary);
             line-height: 1.6;
+            min-height: 100vh;
+            background-image: linear-gradient(to bottom right, #f5f7fa, #e4e8f0);
+            background-attachment: fixed;
         }
 
         /* Loading Spinner */
         .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid var(--primary-color);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #ffffff;
             border-radius: 50%;
             width: 20px;
             height: 20px;
-            animation: spin 1s linear infinite;
+            animation: spin 0.8s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
             display: inline-block;
-            margin-right: 8px;
+            margin-right: 10px;
+            vertical-align: middle;
         }
 
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+        
+        /* Icon set for cards */
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(94, 96, 206, 0.1);
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: var(--primary-color);
+            font-size: 18px;
         }
 
         /* Login Styles */
@@ -60,32 +86,67 @@
             align-items: center;
             min-height: 100vh;
             padding: 20px;
+            background-image: var(--gradient-primary);
+            background-size: cover;
+            background-position: center;
         }
 
         .login-container {
             background: var(--card-bg);
-            padding: 2.5rem;
+            padding: 3rem;
             border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             width: 100%;
             max-width: 420px;
+            margin: 0 auto;
             border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+        
+        .login-container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: var(--gradient-primary);
+        }
+        
+        .login-container::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 150px;
+            height: 150px;
+            background: var(--gradient-primary);
+            opacity: 0.05;
+            border-radius: 50% 0 0 0;
+            z-index: 0;
+            pointer-events: none;
         }
 
         .login-header {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 2.8rem;
         }
 
         .login-header h2 {
             color: var(--primary-color);
-            font-size: 1.8rem;
-            margin-bottom: 0.5rem;
+            font-size: 2rem;
+            margin-bottom: 0.8rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
         }
 
         .login-header p {
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            font-size: 1rem;
+            max-width: 80%;
+            margin: 0 auto;
         }
 
         .input-group {
@@ -101,30 +162,32 @@
 
         .input-field {
             width: 100%;
-            padding: 12px 16px;
-            border: 2px solid var(--border-color);
-            border-radius: var(--border-radius);
+            padding: 14px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--btn-radius);
             font-size: 1rem;
             transition: var(--transition);
             background: #fff;
+            box-shadow: var(--shadow-inset);
         }
 
         .input-field:focus {
             outline: none;
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(175, 4, 90, 0.1);
+            box-shadow: 0 0 0 3px rgba(94, 96, 206, 0.25);
         }
 
         .input-field.error {
             border-color: var(--error-color);
+            background-color: rgba(230, 57, 70, 0.03);
         }
 
         .btn {
-            padding: 12px 24px;
+            padding: 14px 24px;
             border: none;
-            border-radius: var(--border-radius);
+            border-radius: var(--btn-radius);
             font-size: 1rem;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
             transition: var(--transition);
             text-decoration: none;
@@ -132,36 +195,69 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 0.02em;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 120%;
+            height: 0;
+            padding-bottom: 120%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+            transition: transform 0.5s, opacity 0.3s;
+        }
+
+        .btn:active::after {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+            transition: 0s;
         }
 
         .btn-primary {
-            background: var(--primary-color);
+            background: var(--gradient-primary);
             color: white;
+            box-shadow: 0 4px 15px rgba(94, 96, 206, 0.3);
         }
 
         .btn-primary:hover:not(:disabled) {
             background: var(--primary-hover);
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(94, 96, 206, 0.4);
         }
 
         .btn-secondary {
             background: var(--secondary-color);
-            color: white;
+            color: var(--dark-bg);
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(100, 223, 223, 0.3);
         }
 
         .btn-secondary:hover:not(:disabled) {
             background: var(--secondary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(100, 223, 223, 0.4);
         }
 
         .btn-outline {
             background: transparent;
             border: 2px solid var(--primary-color);
             color: var(--primary-color);
+            box-shadow: none;
         }
 
         .btn-outline:hover:not(:disabled) {
-            background: var(--primary-color);
-            color: white;
+            background: rgba(94, 96, 206, 0.1);
+            border-color: var(--primary-hover);
+            color: var(--primary-hover);
+            transform: translateY(-1px);
         }
 
         .btn:disabled {
@@ -174,59 +270,112 @@
         }
 
         .status-message {
-            padding: 12px;
-            border-radius: var(--border-radius);
-            margin-top: 1rem;
-            font-size: 0.9rem;
+            padding: 14px 16px;
+            border-radius: var(--btn-radius);
+            margin-top: 1.25rem;
+            font-size: 0.95rem;
             display: none;
+            font-weight: 500;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+            position: relative;
+        }
+
+        .status-message::before {
+            font-family: 'system-ui';
+            margin-right: 10px;
+            font-weight: bold;
+            font-size: 1rem;
         }
 
         .status-message.success {
-            background: rgba(40, 167, 69, 0.1);
+            background: rgba(56, 176, 0, 0.08);
             color: var(--success-color);
-            border: 1px solid rgba(40, 167, 69, 0.2);
+            border-left: 4px solid var(--success-color);
+        }
+
+        .status-message.success::before {
+            content: "✓";
         }
 
         .status-message.error {
-            background: rgba(220, 53, 69, 0.1);
+            background: rgba(230, 57, 70, 0.08);
             color: var(--error-color);
-            border: 1px solid rgba(220, 53, 69, 0.2);
+            border-left: 4px solid var(--error-color);
+        }
+
+        .status-message.error::before {
+            content: "✕";
         }
 
         .status-message.warning {
-            background: rgba(255, 193, 7, 0.1);
-            color: #856404;
-            border: 1px solid rgba(255, 193, 7, 0.2);
+            background: rgba(251, 133, 0, 0.08);
+            color: var(--warning-color);
+            border-left: 4px solid var(--warning-color);
+        }
+        
+        .status-message.warning::before {
+            content: "⚠";
         }
 
         /* Dashboard Styles */
         .dashboard-view {
-            padding: 20px;
+            padding: 30px 20px;
         }
 
         .dashboard-header {
             background: var(--card-bg);
-            padding: 20px 30px;
+            padding: 24px 35px;
             border-radius: var(--border-radius);
             box-shadow: var(--shadow);
-            margin-bottom: 30px;
+            margin-bottom: 35px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 20px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        
+        .dashboard-header::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-primary);
         }
 
         .dashboard-title {
             color: var(--primary-color);
             font-size: 2rem;
-            font-weight: 600;
+            font-weight: 700;
+            position: relative;
+        }
+
+        .dashboard-title::after {
+            content: "";
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: var(--secondary-color);
+            border-radius: 2px;
         }
 
         .user-info {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 20px;
+            font-weight: 500;
+        }
+
+        .user-info strong {
+            color: var(--primary-color);
         }
 
         .container {
@@ -244,43 +393,61 @@
             background: var(--card-bg);
             border-radius: var(--border-radius);
             box-shadow: var(--shadow);
-            padding: 30px;
+            padding: 35px;
             border: 1px solid var(--border-color);
             transition: var(--transition);
+            position: relative;
         }
 
         .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-hover);
         }
 
         .card-header {
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--light-bg);
+            margin-bottom: 25px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .card-header::before {
+            content: "";
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 80px;
+            height: 3px;
+            background: var(--gradient-primary);
+            border-radius: 2px;
         }
 
         .card-header h3 {
             color: var(--primary-color);
-            font-size: 1.3rem;
-            font-weight: 600;
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
         }
 
         .card-header p {
             color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin-top: 5px;
+            font-size: 0.95rem;
+            margin-top: 6px;
+            line-height: 1.5;
+            max-width: 90%;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 22px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 6px;
-            font-weight: 500;
+            margin-bottom: 8px;
+            font-weight: 600;
             color: var(--text-primary);
+            font-size: 0.95rem;
         }
 
         .form-row {
@@ -292,13 +459,18 @@
         /* Responsive Design */
         @media (max-width: 768px) {
             .dashboard-header {
-                padding: 15px 20px;
+                padding: 20px 25px;
                 flex-direction: column;
                 text-align: center;
             }
 
             .dashboard-title {
-                font-size: 1.5rem;
+                font-size: 1.7rem;
+            }
+            
+            .dashboard-title::after {
+                left: 50%;
+                transform: translateX(-50%);
             }
 
             .admin-actions {
@@ -306,7 +478,7 @@
             }
 
             .card {
-                padding: 20px;
+                padding: 25px;
             }
 
             .form-row {
@@ -314,18 +486,51 @@
             }
 
             .login-container {
-                padding: 2rem;
+                padding: 2.2rem;
                 margin: 20px;
+                max-width: 90%;
+            }
+            
+            .toast-container {
+                left: 20px;
+                right: 20px;
+                align-items: center;
+            }
+            
+            .toast {
+                width: 100%;
+                max-width: 100%;
             }
         }
 
         @media (max-width: 480px) {
             .dashboard-view {
-                padding: 10px;
+                padding: 15px;
             }
 
             .login-container {
-                padding: 1.5rem;
+                padding: 1.8rem;
+            }
+            
+            .btn {
+                padding: 12px 20px;
+                font-size: 0.95rem;
+            }
+            
+            .card-header h3 {
+                font-size: 1.25rem;
+            }
+        }
+        
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            body.auto-dark-mode {
+                --light-bg: #121212;
+                --card-bg: #1e1e1e;
+                --border-color: #333;
+                --text-primary: #e0e0e0;
+                --text-secondary: #aaa;
+                --shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
             }
         }
 
@@ -344,27 +549,57 @@
 
         /* Animation for form submissions */
         .card.submitting {
-            opacity: 0.7;
+            opacity: 0.75;
             pointer-events: none;
+            transform: scale(0.99);
+            transition: all 0.3s ease;
         }
+        
+        /* Add animations for page transitions */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .login-view, .dashboard-view {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .card {
+            animation: fadeIn 0.5s ease-out;
+            animation-fill-mode: both;
+        }
+        
+        .admin-actions .card:nth-child(1) { animation-delay: 0.1s; }
+        .admin-actions .card:nth-child(2) { animation-delay: 0.2s; }
+        .admin-actions .card:nth-child(3) { animation-delay: 0.3s; }
+        .admin-actions .card:nth-child(4) { animation-delay: 0.4s; }
+        .admin-actions .card:nth-child(5) { animation-delay: 0.5s; }
+        .admin-actions .card:nth-child(6) { animation-delay: 0.6s; }
 
         /* Toast notifications */
         .toast-container {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: 25px;
+            right: 25px;
             z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
         .toast {
             background: var(--card-bg);
             border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            padding: 16px 20px;
-            margin-bottom: 10px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            padding: 18px 22px;
             border-left: 4px solid;
             max-width: 400px;
-            animation: slideIn 0.3s ease;
+            animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            transition: opacity 0.3s ease, transform 0.3s ease;
         }
 
         .toast.success {
@@ -374,16 +609,27 @@
         .toast.error {
             border-left-color: var(--error-color);
         }
+        
+        .toast.warning {
+            border-left-color: var(--warning-color);
+        }
 
         @keyframes slideIn {
             from {
-                transform: translateX(100%);
+                transform: translateX(120%);
                 opacity: 0;
             }
             to {
                 transform: translateX(0);
                 opacity: 1;
             }
+        }
+        
+        /* Improved form styling */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
         }
     </style>
 </head>
@@ -395,22 +641,34 @@
     <div id="loginSection" class="login-view">
         <div class="login-container">
             <div class="login-header">
+                <div style="margin-bottom: 20px; display: inline-block;">
+                    <div style="width: 80px; height: 80px; background: var(--gradient-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                        <i class="fas fa-user-shield" style="font-size: 35px; color: white;"></i>
+                    </div>
+                </div>
                 <h2>Admin Login</h2>
                 <p>Please sign in to access the dashboard</p>
             </div>
             <form id="loginForm">
                 <div class="input-group">
-                    <label for="adminUsername">Username</label>
-                    <input type="text" id="adminUsername" class="input-field" placeholder="Enter your username" required autocomplete="username">
+                    <label for="adminUsername" style="text-align: left; display: block;"><i class="fas fa-user-circle" style="margin-right: 6px;"></i>Username</label>
+                    <div style="position: relative;">
+                        <i class="fas fa-user" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #aaa;"></i>
+                        <input type="text" id="adminUsername" class="input-field" style="padding-left: 40px;" placeholder="Enter your username" required autocomplete="username">
+                    </div>
                 </div>
                 <div class="input-group">
-                    <label for="adminPassword">Password</label>
-                    <input type="password" id="adminPassword" class="input-field" placeholder="Enter your password" required autocomplete="current-password">
+                    <label for="adminPassword" style="text-align: left; display: block;"><i class="fas fa-lock" style="margin-right: 6px;"></i>Password</label>
+                    <div style="position: relative;">
+                        <i class="fas fa-key" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #aaa;"></i>
+                        <input type="password" id="adminPassword" class="input-field" style="padding-left: 40px;" placeholder="Enter your password" required autocomplete="current-password">
+                    </div>
                 </div>
-                <button type="submit" id="loginBtn" class="btn btn-primary btn-full">
+                <button type="submit" id="loginBtn" class="btn btn-primary btn-full" style="margin-top: 15px; padding: 16px;">
+                    <i class="fas fa-sign-in-alt" style="margin-right: 10px;"></i>
                     <span id="loginBtnText">Sign In</span>
                 </button>
-                <div id="loginStatus" class="status-message"></div>
+                <div id="loginStatus" class="status-message" style="text-align: left;"></div>
             </form>
         </div>
     </div>
@@ -419,10 +677,10 @@
     <div id="dashboardSection" style="display:none;">
         <div class="container">
             <div class="dashboard-header">
-                <h1 class="dashboard-title">Admin Dashboard</h1>
+                <h1 class="dashboard-title"><i class="fas fa-th-large" style="margin-right: 12px; color: var(--secondary-color);"></i>Admin Dashboard</h1>
                 <div class="user-info">
-                    <span>Welcome, <strong id="adminName">Admin</strong></span>
-                    <button onclick="logout()" class="btn btn-outline">Logout</button>
+                    <span><i class="fas fa-user-shield" style="margin-right: 8px; color: var(--primary-color);"></i>Welcome, <strong id="adminName">Admin</strong></span>
+                    <button onclick="logout()" class="btn btn-outline"><i class="fas fa-sign-out-alt" style="margin-right: 8px;"></i>Logout</button>
                 </div>
             </div>
 
@@ -430,27 +688,28 @@
                 <!-- Register Student -->
                 <div class="card">
                     <div class="card-header">
-                        <h3>Register Student</h3>
+                        <h3><div class="card-icon"><i class="fas fa-user-plus"></i></div>Register Student</h3>
                         <p>Add a new student to the system</p>
                     </div>
                     <form id="registerStudentForm">
                         <div class="form-group">
-                            <label for="studentName">Full Name</label>
+                            <label for="studentName"><i class="fas fa-user" style="margin-right: 6px;"></i>Full Name</label>
                             <input type="text" id="studentName" class="input-field" placeholder="Enter student's full name" required>
                         </div>
                         <div class="form-group">
-                            <label for="studentReg">Registration Number</label>
+                            <label for="studentReg"><i class="fas fa-id-card" style="margin-right: 6px;"></i>Registration Number</label>
                             <input type="text" id="studentReg" class="input-field" placeholder="Enter registration number" required>
                         </div>
                         <div class="form-group">
-                            <label for="studentCourse">Course</label>
+                            <label for="studentCourse"><i class="fas fa-book" style="margin-right: 6px;"></i>Course</label>
                             <input type="text" id="studentCourse" class="input-field" placeholder="Enter course name" required>
                         </div>
                         <div class="form-group">
-                            <label for="studentYearSemester">Year/Semester</label>
+                            <label for="studentYearSemester"><i class="fas fa-calendar-alt" style="margin-right: 6px;"></i>Year/Semester</label>
                             <input type="text" id="studentYearSemester" class="input-field" placeholder="e.g., Year 2 Semester 1" required>
                         </div>
                         <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-user-check" style="margin-right: 8px;"></i>
                             <span class="btn-text">Register Student</span>
                         </button>
                         <div class="status-message" id="registerStatus"></div>
@@ -460,15 +719,16 @@
                 <!-- Deregister Student -->
                 <div class="card">
                     <div class="card-header">
-                        <h3>Deregister Student</h3>
+                        <h3><div class="card-icon"><i class="fas fa-user-minus"></i></div>Deregister Student</h3>
                         <p>Remove a student from the system</p>
                     </div>
                     <form id="deregisterStudentForm">
                         <div class="form-group">
-                            <label for="deregStudentReg">Registration Number</label>
+                            <label for="deregStudentReg"><i class="fas fa-id-card" style="margin-right: 6px;"></i>Registration Number</label>
                             <input type="text" id="deregStudentReg" class="input-field" placeholder="Enter registration number" required>
                         </div>
                         <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-user-times" style="margin-right: 8px;"></i>
                             <span class="btn-text">Deregister Student</span>
                         </button>
                         <div class="status-message" id="deregisterStatus"></div>
@@ -478,25 +738,26 @@
                 <!-- Register Units for Student -->
                 <div class="card">
                     <div class="card-header">
-                        <h3>Register Units</h3>
+                        <h3><div class="card-icon"><i class="fas fa-book-open"></i></div>Register Units</h3>
                         <p>Register course units for a student</p>
                     </div>
                     <form id="registerUnitsForm">
                         <div class="form-group">
-                            <label for="unitStudentReg">Registration Number</label>
+                            <label for="unitStudentReg"><i class="fas fa-id-card" style="margin-right: 6px;"></i>Registration Number</label>
                             <input type="text" id="unitStudentReg" class="input-field" placeholder="Enter registration number" required>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="unitName">Unit Name</label>
+                                <label for="unitName"><i class="fas fa-book" style="margin-right: 6px;"></i>Unit Name</label>
                                 <input type="text" id="unitName" class="input-field" placeholder="Enter unit name" required>
                             </div>
                             <div class="form-group">
-                                <label for="unitCode">Unit Code</label>
+                                <label for="unitCode"><i class="fas fa-hashtag" style="margin-right: 6px;"></i>Unit Code</label>
                                 <input type="text" id="unitCode" class="input-field" placeholder="Enter unit code" required>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-plus-circle" style="margin-right: 8px;"></i>
                             <span class="btn-text">Register Unit</span>
                         </button>
                         <div class="status-message" id="unitStatus"></div>
@@ -506,19 +767,20 @@
                 <!-- Promote Student -->
                 <div class="card">
                     <div class="card-header">
-                        <h3>Promote Student</h3>
+                        <h3><div class="card-icon"><i class="fas fa-arrow-up"></i></div>Promote Student</h3>
                         <p>Promote student to next level</p>
                     </div>
                     <form id="promoteStudentForm">
                         <div class="form-group">
-                            <label for="promoteStudentReg">Registration Number</label>
+                            <label for="promoteStudentReg"><i class="fas fa-id-card" style="margin-right: 6px;"></i>Registration Number</label>
                             <input type="text" id="promoteStudentReg" class="input-field" placeholder="Enter registration number" required>
                         </div>
                         <div class="form-group">
-                            <label for="newYearSemester">New Year/Semester</label>
+                            <label for="newYearSemester"><i class="fas fa-calendar-alt" style="margin-right: 6px;"></i>New Year/Semester</label>
                             <input type="text" id="newYearSemester" class="input-field" placeholder="e.g., Year 3 Semester 1" required>
                         </div>
                         <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-level-up-alt" style="margin-right: 8px;"></i>
                             <span class="btn-text">Promote Student</span>
                         </button>
                         <div class="status-message" id="promoteStatus"></div>
@@ -528,15 +790,16 @@
                 <!-- Academic Leave -->
                 <div class="card">
                     <div class="card-header">
-                        <h3>Academic Leave</h3>
+                        <h3><div class="card-icon"><i class="fas fa-pause-circle"></i></div>Academic Leave</h3>
                         <p>Grant academic leave to a student</p>
                     </div>
                     <form id="academicLeaveForm">
                         <div class="form-group">
-                            <label for="leaveStudentReg">Registration Number</label>
+                            <label for="leaveStudentReg"><i class="fas fa-id-card" style="margin-right: 6px;"></i>Registration Number</label>
                             <input type="text" id="leaveStudentReg" class="input-field" placeholder="Enter registration number" required>
                         </div>
                         <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-clock" style="margin-right: 8px;"></i>
                             <span class="btn-text">Grant Academic Leave</span>
                         </button>
                         <div class="status-message" id="leaveStatus"></div>
@@ -546,15 +809,16 @@
                 <!-- Re-admit Student -->
                 <div class="card">
                     <div class="card-header">
-                        <h3>Re-admit Student</h3>
+                        <h3><div class="card-icon"><i class="fas fa-user-check"></i></div>Re-admit Student</h3>
                         <p>Re-admit a student from academic leave</p>
                     </div>
                     <form id="readmitStudentForm">
                         <div class="form-group">
-                            <label for="readmitStudentReg">Registration Number</label>
+                            <label for="readmitStudentReg"><i class="fas fa-id-card" style="margin-right: 6px;"></i>Registration Number</label>
                             <input type="text" id="readmitStudentReg" class="input-field" placeholder="Enter registration number" required>
                         </div>
                         <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-undo" style="margin-right: 8px;"></i>
                             <span class="btn-text">Re-admit Student</span>
                         </button>
                         <div class="status-message" id="readmitStatus"></div>
@@ -566,7 +830,7 @@
 
     <script>
         // Constants
-        const API_BASE_URL = 'https://clipsback-production.up.railway.app';
+        const API_BASE_URL = 'http://localhost:3000'; // Uses current server origin
         const ADMIN_TOKEN_KEY = 'adminToken';
         const ADMIN_DATA_KEY = 'adminData';
 
@@ -579,29 +843,70 @@
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
+            
+            // Icons based on notification type
+            let icon = '';
+            switch(type) {
+                case 'success':
+                    icon = '<i class="fas fa-check-circle" style="color: var(--success-color); font-size: 1.2rem; margin-right: 10px;"></i>';
+                    break;
+                case 'error':
+                    icon = '<i class="fas fa-exclamation-circle" style="color: var(--error-color); font-size: 1.2rem; margin-right: 10px;"></i>';
+                    break;
+                case 'warning':
+                    icon = '<i class="fas fa-exclamation-triangle" style="color: var(--warning-color); font-size: 1.2rem; margin-right: 10px;"></i>';
+                    break;
+                default:
+                    icon = '<i class="fas fa-info-circle" style="color: var(--secondary-color); font-size: 1.2rem; margin-right: 10px;"></i>';
+            }
+            
             toast.innerHTML = `
-                <div style="font-weight: 500;">${type === 'success' ? '✓' : '✗'} ${type.charAt(0).toUpperCase() + type.slice(1)}</div>
-                <div style="margin-top: 4px; font-size: 0.9rem;">${message}</div>
+                <div style="display: flex; align-items: center;">
+                    ${icon}
+                    <div style="font-weight: 600; font-size: 1rem;">${type.charAt(0).toUpperCase() + type.slice(1)}</div>
+                    <div style="margin-left: auto; cursor: pointer;" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fas fa-times" style="color: #888; font-size: 0.9rem;"></i>
+                    </div>
+                </div>
+                <div style="margin-top: 8px; margin-left: 32px; font-size: 0.95rem; line-height: 1.5;">${message}</div>
             `;
             
             $('toastContainer').appendChild(toast);
             
+            // Auto dismiss after 5 seconds
             setTimeout(() => {
-                toast.style.animation = 'slideIn 0.3s ease reverse';
-                setTimeout(() => toast.remove(), 300);
-            }, 4000);
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(120%)';
+                setTimeout(() => toast.remove(), 400);
+            }, 5000);
         }
 
         // Status message helper
         function showStatus(elementId, message, type = 'success') {
             const statusEl = $(elementId);
-            statusEl.textContent = message;
+            
+            // Add appropriate icon based on type
+            let icon = '';
+            switch(type) {
+                case 'success':
+                    icon = '<i class="fas fa-check-circle" style="margin-right: 8px;"></i>';
+                    break;
+                case 'error':
+                    icon = '<i class="fas fa-times-circle" style="margin-right: 8px;"></i>';
+                    break;
+                case 'warning':
+                    icon = '<i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>';
+                    break;
+            }
+            
+            statusEl.innerHTML = icon + message;
             statusEl.className = `status-message ${type}`;
             showElement(statusEl);
             
+            // Animate and hide after 5 seconds
             setTimeout(() => {
                 statusEl.style.opacity = '0';
-                setTimeout(() => hideElement(statusEl), 300);
+                setTimeout(() => hideElement(statusEl), 500);
             }, 5000);
         }
 
@@ -609,13 +914,20 @@
         function setLoadingState(buttonId, isLoading, text = '') {
             const btn = $(buttonId);
             const btnText = btn.querySelector('.btn-text') || btn.querySelector('span');
+            const icon = btn.querySelector('i:not(.spinner)');
             
             if (isLoading) {
                 btn.disabled = true;
-                btnText.innerHTML = '<div class="spinner"></div>Processing...';
+                if (icon) icon.style.display = 'none';
+                btnText.innerHTML = '<div class="spinner"></div><span style="margin-left: 5px;">Processing...</span>';
+                btn.classList.add('processing');
+                btn.style.opacity = '0.85';
             } else {
                 btn.disabled = false;
+                if (icon) icon.style.display = 'inline-block';
                 btnText.textContent = text || btnText.textContent.replace('Processing...', '').trim();
+                btn.classList.remove('processing');
+                btn.style.opacity = '1';
             }
         }
 
@@ -633,11 +945,12 @@
                     ...options
                 });
 
+                const data = await response.json();
+                
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
                 }
 
-                const data = await response.json();
                 return { success: true, data };
             } catch (error) {
                 console.error('API Request failed:', error);
@@ -660,9 +973,7 @@
             if (!username || !password) {
                 showStatus('loginStatus', 'Please enter both username and password', 'error');
                 return;
-            }
-
-            setLoadingState('loginBtn', true);
+            }            setLoadingState('loginBtn', true);
             
             const result = await apiRequest('/auth/admin-login', {
                 method: 'POST',
@@ -673,11 +984,14 @@
 
             if (result.success && result.data.token) {
                 localStorage.setItem(ADMIN_TOKEN_KEY, result.data.token);
-                localStorage.setItem(ADMIN_DATA_KEY, JSON.stringify(result.data));
+                localStorage.setItem(ADMIN_DATA_KEY, JSON.stringify({
+                    username: username,
+                    id: result.data.adminId || 'unknown'
+                }));
                 showDashboard();
                 showToast('Login successful! Welcome back.');
             } else {
-                showStatus('loginStatus', result.data?.error || result.error || 'Login failed', 'error');
+                showStatus('loginStatus', result.error || 'Login failed. Please check your credentials.', 'error');
             }
         }
 
@@ -710,22 +1024,73 @@
         // Form submission handlers
         async function handleFormSubmission(formId, url, method = 'POST', successMessage = 'Operation completed successfully') {
             const form = $(formId);
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
+            const formData = {};
+            
+            // Get form data
+            const inputs = form.querySelectorAll('input');
+            inputs.forEach(input => {
+                formData[input.id] = input.value.trim();
+            });
+            
+            // Transform data based on form type
+            let payload = {};
+            
+            switch(formId) {
+                case 'registerStudentForm':
+                    payload = {
+                        name: formData.studentName,
+                        registration_number: formData.studentReg,
+                        course: formData.studentCourse,
+                        year_semester: formData.studentYearSemester
+                    };
+                    break;
+                case 'deregisterStudentForm':
+                    payload = {
+                        registration_number: formData.deregStudentReg
+                    };
+                    url = `/students/${formData.deregStudentReg}`; // RESTful URL format
+                    break;
+                case 'registerUnitsForm':
+                    payload = {
+                        student_reg: formData.unitStudentReg,
+                        unit_name: formData.unitName,
+                        unit_code: formData.unitCode
+                    };
+                    break;
+                case 'promoteStudentForm':
+                    payload = {
+                        registration_number: formData.promoteStudentReg,
+                        new_year_semester: formData.newYearSemester
+                    };
+                    break;
+                case 'academicLeaveForm':
+                    payload = {
+                        registration_number: formData.leaveStudentReg
+                    };
+                    break;
+                case 'readmitStudentForm':
+                    payload = {
+                        registration_number: formData.readmitStudentReg
+                    };
+                    break;
+                default:
+                    payload = formData;
+            }
             
             // Add loading state to the form
             form.classList.add('submitting');
             const submitBtn = form.querySelector('button[type="submit"]');
-            setLoadingState(submitBtn.id || 'submitBtn', true);
+            const submitBtnId = submitBtn.id || 'submitBtn'; 
+            setLoadingState(submitBtnId, true);
             
             const result = await apiRequest(url, {
                 method,
-                body: JSON.stringify(data)
+                body: JSON.stringify(payload)
             });
             
             // Remove loading state
             form.classList.remove('submitting');
-            setLoadingState(submitBtn.id || 'submitBtn', false);
+            setLoadingState(submitBtnId, false, submitBtn.textContent.replace('Processing...', '').trim());
             
             const statusElementId = form.querySelector('.status-message').id;
             
@@ -734,17 +1099,35 @@
                 showToast(result.data.message || successMessage);
                 form.reset();
             } else {
-                showStatus(statusElementId, result.data?.error || result.error, 'error');
-                showToast(result.data?.error || result.error, 'error');
+                showStatus(statusElementId, result.error, 'error');
+                showToast(result.error, 'error');
             }
         }
 
         // Initialize application
         function initializeApp() {
+            // Add auto dark mode class to body if user's system prefers dark mode
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.body.classList.add('auto-dark-mode');
+            }
+            
             // Check login status
             const adminToken = localStorage.getItem(ADMIN_TOKEN_KEY);
             if (adminToken) {
-                showDashboard();
+                // Verify token validity
+                apiRequest('/admin/verify-token')
+                    .then(result => {
+                        if (result.success) {
+                            showDashboard();
+                        } else {
+                            localStorage.removeItem(ADMIN_TOKEN_KEY);
+                            showLogin();
+                        }
+                    })
+                    .catch(() => {
+                        localStorage.removeItem(ADMIN_TOKEN_KEY);
+                        showLogin();
+                    });
             } else {
                 showLogin();
             }
@@ -756,10 +1139,10 @@
             const forms = [
                 { id: 'registerStudentForm', url: '/students', message: 'Student registered successfully!' },
                 { id: 'deregisterStudentForm', url: '/students', method: 'DELETE', message: 'Student deregistered successfully!' },
-                { id: 'registerUnitsForm', url: '/registered_units', message: 'Unit registered successfully!' },
-                { id: 'promoteStudentForm', url: '/admin/promote-student', message: 'Student promoted successfully!' },
-                { id: 'academicLeaveForm', url: '/admin/academic-leave', message: 'Academic leave granted successfully!' },
-                { id: 'readmitStudentForm', url: '/admin/readmit-student', message: 'Student re-admitted successfully!' }
+                { id: 'registerUnitsForm', url: '/units/register', message: 'Unit registered successfully!' },
+                { id: 'promoteStudentForm', url: '/students/promote', message: 'Student promoted successfully!' },
+                { id: 'academicLeaveForm', url: '/students/academic-leave', message: 'Academic leave granted successfully!' },
+                { id: 'readmitStudentForm', url: '/students/readmit', message: 'Student re-admitted successfully!' }
             ];
 
             forms.forEach(({ id, url, method = 'POST', message }) => {
