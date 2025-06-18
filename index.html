@@ -631,6 +631,14 @@
             grid-template-columns: 1fr 1fr;
             gap: 18px;
         }
+        
+        /* Textarea styling */
+        textarea.input-field {
+            min-height: 100px;
+            resize: vertical;
+            font-family: monospace;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -705,8 +713,32 @@
                             <input type="text" id="studentCourse" class="input-field" placeholder="Enter course name" required>
                         </div>
                         <div class="form-group">
-                            <label for="studentYearSemester"><i class="fas fa-calendar-alt" style="margin-right: 6px;"></i>Year/Semester</label>
+                            <label for="studentYearSemester"><i class="fas fa-calendar-alt" style="margin-right: 6px;"></i>Level of Study</label>
                             <input type="text" id="studentYearSemester" class="input-field" placeholder="e.g., Year 2 Semester 1" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="studentNationalId"><i class="fas fa-id-card" style="margin-right: 6px;"></i>National ID</label>
+                                <input type="text" id="studentNationalId" class="input-field" placeholder="Enter national ID">
+                            </div>
+                            <div class="form-group">
+                                <label for="studentBirthCert"><i class="fas fa-certificate" style="margin-right: 6px;"></i>Birth Certificate</label>
+                                <input type="text" id="studentBirthCert" class="input-field" placeholder="Enter birth certificate number">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="studentDob"><i class="fas fa-birthday-cake" style="margin-right: 6px;"></i>Date of Birth</label>
+                                <input type="date" id="studentDob" class="input-field">
+                            </div>
+                            <div class="form-group">
+                                <label for="studentPassword"><i class="fas fa-lock" style="margin-right: 6px;"></i>Password</label>
+                                <input type="password" id="studentPassword" class="input-field" placeholder="Enter password">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="studentPhoto"><i class="fas fa-camera" style="margin-right: 6px;"></i>Student Photo</label>
+                            <input type="file" id="studentPhoto" class="input-field" accept="image/*">
                         </div>
                         <button type="submit" class="btn btn-primary btn-full">
                             <i class="fas fa-user-check" style="margin-right: 8px;"></i>
@@ -824,13 +856,159 @@
                         <div class="status-message" id="readmitStatus"></div>
                     </form>
                 </div>
+
+                <!-- Upload Exam Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><div class="card-icon"><i class="fas fa-id-card"></i></div>Upload Exam Card</h3>
+                        <p>Upload exam card for a student</p>
+                    </div>
+                    <form id="examCardForm">
+                        <div class="form-group">
+                            <label for="examCardStudentReg"><i class="fas fa-id-card" style="margin-right: 6px;"></i>Registration Number</label>
+                            <input type="text" id="examCardStudentReg" class="input-field" placeholder="Enter registration number" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="examCardFile"><i class="fas fa-file-pdf" style="margin-right: 6px;"></i>Exam Card File</label>
+                            <input type="file" id="examCardFile" class="input-field" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-upload" style="margin-right: 8px;"></i>
+                            <span class="btn-text">Upload Exam Card</span>
+                        </button>
+                        <div class="status-message" id="examCardStatus"></div>
+                    </form>
+                </div>
+
+                <!-- Manage Fees -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><div class="card-icon"><i class="fas fa-money-bill-wave"></i></div>Manage Fees</h3>
+                        <p>Update student fee information</p>
+                    </div>
+                    <form id="feesForm">
+                        <div class="form-group">
+                            <label for="feesStudentReg"><i class="fas fa-id-card" style="margin-right: 6px;"></i>Registration Number</label>
+                            <input type="text" id="feesStudentReg" class="input-field" placeholder="Enter registration number" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="semesterFee"><i class="fas fa-dollar-sign" style="margin-right: 6px;"></i>Semester Fee</label>
+                                <input type="number" id="semesterFee" class="input-field" placeholder="Enter semester fee" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="feeBalance"><i class="fas fa-balance-scale" style="margin-right: 6px;"></i>Fee Balance</label>
+                                <input type="number" id="feeBalance" class="input-field" placeholder="Enter fee balance" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="totalPaid"><i class="fas fa-check-circle" style="margin-right: 6px;"></i>Total Paid</label>
+                            <input type="number" id="totalPaid" class="input-field" placeholder="Enter total paid" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-save" style="margin-right: 8px;"></i>
+                            <span class="btn-text">Update Fees</span>
+                        </button>
+                        <div class="status-message" id="feesStatus"></div>
+                    </form>
+                </div>
+
+                <!-- Upload Finance Document -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><div class="card-icon"><i class="fas fa-file-invoice-dollar"></i></div>Finance Document</h3>
+                        <p>Upload financial statement or receipt</p>
+                    </div>
+                    <form id="financeForm">
+                        <div class="form-group">
+                            <label for="financeStudentReg"><i class="fas fa-id-card" style="margin-right: 6px;"></i>Registration Number</label>
+                            <input type="text" id="financeStudentReg" class="input-field" placeholder="Enter registration number" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="documentType"><i class="fas fa-file-alt" style="margin-right: 6px;"></i>Document Type</label>
+                            <select id="documentType" class="input-field" required>
+                                <option value="statement">Statement</option>
+                                <option value="receipt">Receipt</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="financeFile"><i class="fas fa-file-upload" style="margin-right: 6px;"></i>Document File</label>
+                            <input type="file" id="financeFile" class="input-field" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-upload" style="margin-right: 8px;"></i>
+                            <span class="btn-text">Upload Document</span>
+                        </button>
+                        <div class="status-message" id="financeStatus"></div>
+                    </form>
+                </div>
+
+                <!-- Upload Results -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><div class="card-icon"><i class="fas fa-chart-bar"></i></div>Upload Results</h3>
+                        <p>Upload semester results for a student</p>
+                    </div>
+                    <form id="resultsForm">
+                        <div class="form-group">
+                            <label for="resultsStudentReg"><i class="fas fa-id-card" style="margin-right: 6px;"></i>Registration Number</label>
+                            <input type="text" id="resultsStudentReg" class="input-field" placeholder="Enter registration number" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="resultsSemester"><i class="fas fa-calendar-alt" style="margin-right: 6px;"></i>Semester</label>
+                            <select id="resultsSemester" class="input-field" required>
+                                <option value="1">Semester 1</option>
+                                <option value="2">Semester 2</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="resultsData"><i class="fas fa-list-alt" style="margin-right: 6px;"></i>Results Data (JSON)</label>
+                            <textarea id="resultsData" class="input-field" rows="4" placeholder='{"unit1": "A", "unit2": "B+"}' required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-upload" style="margin-right: 8px;"></i>
+                            <span class="btn-text">Upload Results</span>
+                        </button>
+                        <div class="status-message" id="resultsStatus"></div>
+                    </form>
+                </div>
+
+                <!-- Upload Timetable -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><div class="card-icon"><i class="fas fa-calendar-week"></i></div>Upload Timetable</h3>
+                        <p>Upload semester timetable for a student</p>
+                    </div>
+                    <form id="timetableForm">
+                        <div class="form-group">
+                            <label for="timetableStudentReg"><i class="fas fa-id-card" style="margin-right: 6px;"></i>Registration Number</label>
+                            <input type="text" id="timetableStudentReg" class="input-field" placeholder="Enter registration number" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="timetableSemester"><i class="fas fa-calendar-alt" style="margin-right: 6px;"></i>Semester</label>
+                            <select id="timetableSemester" class="input-field" required>
+                                <option value="1">Semester 1</option>
+                                <option value="2">Semester 2</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="timetableData"><i class="fas fa-list-alt" style="margin-right: 6px;"></i>Timetable Data (JSON)</label>
+                            <textarea id="timetableData" class="input-field" rows="4" placeholder='{"monday": [{"time": "8:00-10:00", "unit": "Math"}]}' required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-upload" style="margin-right: 8px;"></i>
+                            <span class="btn-text">Upload Timetable</span>
+                        </button>
+                        <div class="status-message" id="timetableStatus"></div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         // Constants
-        const API_BASE_URL = 'https://clipscollegebackend.netlify.app'; // Uses current server origin
+        const API_BASE_URL = 'https://clipscollegebackend.vercel.app'; // Uses current server origin
         const ADMIN_TOKEN_KEY = 'adminToken';
         const ADMIN_DATA_KEY = 'adminData';
 
@@ -935,11 +1113,21 @@
         async function apiRequest(url, options = {}) {
             try {
                 const token = localStorage.getItem(ADMIN_TOKEN_KEY);
+                
+                // Set up headers based on whether this is a file upload or not
+                let headers = {
+                    'Accept': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` })
+                };
+                
+                // Only add Content-Type for non-FormData requests
+                if (!(options.body instanceof FormData)) {
+                    headers['Content-Type'] = 'application/json';
+                }
+                
                 const response = await fetch(`${API_BASE_URL}${url}`, {
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        ...(token && { 'Authorization': `Bearer ${token}` }),
+                        ...headers,
                         ...options.headers
                     },
                     ...options
@@ -1034,15 +1222,36 @@
             
             // Transform data based on form type
             let payload = {};
+            let isFileUpload = false;
             
             switch(formId) {
                 case 'registerStudentForm':
-                    payload = {
-                        name: formData.studentName,
-                        registration_number: formData.studentReg,
-                        course: formData.studentCourse,
-                        year_semester: formData.studentYearSemester
-                    };
+                    isFileUpload = $('studentPhoto').files.length > 0;
+                    
+                    if (isFileUpload) {
+                        const studentFormData = new FormData();
+                        studentFormData.append('name', formData.studentName);
+                        studentFormData.append('registration_number', formData.studentReg);
+                        studentFormData.append('course', formData.studentCourse);
+                        studentFormData.append('level_of_study', formData.studentYearSemester);
+                        studentFormData.append('national_id', formData.studentNationalId || '');
+                        studentFormData.append('birth_certificate', formData.studentBirthCert || '');
+                        studentFormData.append('date_of_birth', formData.studentDob || '');
+                        studentFormData.append('password', formData.studentPassword || '');
+                        studentFormData.append('photo', $('studentPhoto').files[0]);
+                        payload = studentFormData;
+                    } else {
+                        payload = {
+                            name: formData.studentName,
+                            registration_number: formData.studentReg,
+                            course: formData.studentCourse,
+                            level_of_study: formData.studentYearSemester,
+                            national_id: formData.studentNationalId || null,
+                            birth_certificate: formData.studentBirthCert || null,
+                            date_of_birth: formData.studentDob || null,
+                            password: formData.studentPassword || null
+                        };
+                    }
                     break;
                 case 'deregisterStudentForm':
                     payload = {
@@ -1054,13 +1263,14 @@
                     payload = {
                         student_reg: formData.unitStudentReg,
                         unit_name: formData.unitName,
-                        unit_code: formData.unitCode
+                        unit_code: formData.unitCode,
+                        status: 'active'
                     };
                     break;
                 case 'promoteStudentForm':
                     payload = {
                         registration_number: formData.promoteStudentReg,
-                        new_year_semester: formData.newYearSemester
+                        new_level_of_study: formData.newYearSemester
                     };
                     break;
                 case 'academicLeaveForm':
@@ -1073,6 +1283,55 @@
                         registration_number: formData.readmitStudentReg
                     };
                     break;
+                case 'examCardForm':
+                    isFileUpload = true;
+                    const examCardFormData = new FormData();
+                    examCardFormData.append('student_reg', formData.examCardStudentReg);
+                    examCardFormData.append('exam_card', $('examCardFile').files[0]);
+                    payload = examCardFormData;
+                    break;
+                case 'feesForm':
+                    payload = {
+                        student_reg: formData.feesStudentReg,
+                        fee_balance: parseFloat(formData.feeBalance),
+                        total_paid: parseFloat(formData.totalPaid),
+                        semester_fee: parseFloat(formData.semesterFee)
+                    };
+                    break;
+                case 'financeForm':
+                    isFileUpload = true;
+                    const financeFormData = new FormData();
+                    financeFormData.append('student_reg', formData.financeStudentReg);
+                    financeFormData.append('document_type', formData.documentType);
+                    financeFormData.append('file', $('financeFile').files[0]);
+                    payload = financeFormData;
+                    break;
+                case 'resultsForm':
+                    try {
+                        const resultsDataJson = JSON.parse(formData.resultsData);
+                        payload = {
+                            student_reg: formData.resultsStudentReg,
+                            semester: parseInt(formData.resultsSemester),
+                            result_data: resultsDataJson
+                        };
+                    } catch (e) {
+                        showStatus(form.querySelector('.status-message').id, 'Invalid JSON format for results data', 'error');
+                        return;
+                    }
+                    break;
+                case 'timetableForm':
+                    try {
+                        const timetableDataJson = JSON.parse(formData.timetableData);
+                        payload = {
+                            student_reg: formData.timetableStudentReg,
+                            semester: parseInt(formData.timetableSemester),
+                            timetable_data: timetableDataJson
+                        };
+                    } catch (e) {
+                        showStatus(form.querySelector('.status-message').id, 'Invalid JSON format for timetable data', 'error');
+                        return;
+                    }
+                    break;
                 default:
                     payload = formData;
             }
@@ -1083,10 +1342,21 @@
             const submitBtnId = submitBtn.id || 'submitBtn'; 
             setLoadingState(submitBtnId, true);
             
-            const result = await apiRequest(url, {
-                method,
-                body: JSON.stringify(payload)
-            });
+            let requestOptions = {
+                method
+            };
+            
+            if (isFileUpload) {
+                // For file uploads, don't set Content-Type header (browser will set it with boundary)
+                requestOptions.body = payload; // FormData object
+            } else {
+                requestOptions.body = JSON.stringify(payload);
+                requestOptions.headers = {
+                    'Content-Type': 'application/json'
+                };
+            }
+            
+            const result = await apiRequest(url, requestOptions);
             
             // Remove loading state
             form.classList.remove('submitting');
@@ -1142,7 +1412,12 @@
                 { id: 'registerUnitsForm', url: '/units/register', message: 'Unit registered successfully!' },
                 { id: 'promoteStudentForm', url: '/students/promote', message: 'Student promoted successfully!' },
                 { id: 'academicLeaveForm', url: '/students/academic-leave', message: 'Academic leave granted successfully!' },
-                { id: 'readmitStudentForm', url: '/students/readmit', message: 'Student re-admitted successfully!' }
+                { id: 'readmitStudentForm', url: '/students/readmit', message: 'Student re-admitted successfully!' },
+                { id: 'examCardForm', url: '/exam-cards', message: 'Exam card uploaded successfully!' },
+                { id: 'feesForm', url: '/fees', message: 'Fees updated successfully!' },
+                { id: 'financeForm', url: '/finance', message: 'Finance document uploaded successfully!' },
+                { id: 'resultsForm', url: '/results', message: 'Results uploaded successfully!' },
+                { id: 'timetableForm', url: '/timetables', message: 'Timetable uploaded successfully!' }
             ];
 
             forms.forEach(({ id, url, method = 'POST', message }) => {
