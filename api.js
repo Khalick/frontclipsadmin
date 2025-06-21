@@ -765,8 +765,9 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="editStudentPhoto"><i class="fas fa-camera"></i> Student Photo</label>
+                                <label for="editStudentPhoto"><i class="fas fa-camera"></i> Student Photo (Optional)</label>
                                 <input type="file" id="editStudentPhoto" class="input-field" accept="image/*">
+                                <p class="form-help-text">Leave empty to keep current photo</p>
                                 ${student.photo_url ? 
                                     `<div class="current-photo">
                                         <p>Current Photo:</p>
@@ -869,29 +870,76 @@
                     saveBtn.innerHTML = '<div class="spinner"></div> Saving...';
                     
                     try {
-                        const payload = {
-                            name,
-                            registration_number: regNumber,
-                            course,
-                            level_of_study: level,
-                            national_id: nationalId || null,
-                            birth_certificate: birthCert || null,
-                            date_of_birth: dob || null,
-                            status
-                        };
+                        // Check if there is a photo to upload (optional)
+                        const photoInput = document.getElementById('editStudentPhoto');
+                        const hasPhoto = photoInput && photoInput.files && photoInput.files.length > 0;
                         
-                        console.log('Sending update for student:', studentId, payload);
+                        let result;
                         
-                        const result = await apiRequest(`/students/${studentId}`, {
-                            method: 'PUT',
-                            body: JSON.stringify(payload)
-                        });
+                        if (hasPhoto) {
+                            // If there's a photo, use FormData to handle the multipart upload
+                            const formData = new FormData();
+                            formData.append('name', name);
+                            formData.append('registration_number', regNumber);
+                            formData.append('course', course);
+                            formData.append('level_of_study', level);
+                            if (nationalId) formData.append('national_id', nationalId);
+                            if (birthCert) formData.append('birth_certificate', birthCert);
+                            if (dob) formData.append('date_of_birth', dob);
+                            formData.append('status', status);
+                            formData.append('photo', photoInput.files[0]);
+                            
+                            console.log('Sending update for student with photo:', studentId);
+                            
+                            result = await apiRequest(`/students/${studentId}`, {
+                                method: 'PUT',
+                                body: formData,
+                                // Don't set Content-Type header, browser will set it with boundary for FormData
+                            });
+                        } else {
+                            // If no photo, just send JSON data
+                            const payload = {
+                                name,
+                                registration_number: regNumber,
+                                course,
+                                level_of_study: level,
+                                national_id: nationalId || null,
+                                birth_certificate: birthCert || null,
+                                date_of_birth: dob || null,
+                                status
+                            };
+                            
+                            console.log('Sending update for student:', studentId, payload);
+                            
+                            result = await apiRequest(`/students/${studentId}`, {
+                                method: 'PUT',
+                                body: JSON.stringify(payload)
+                            });
+                        }
                         
                         if (result.success) {
                             // Update student in the local data
                             const index = studentsData.findIndex(s => s.id === studentId);
                             if (index !== -1) {
-                                studentsData[index] = { ...studentsData[index], ...payload };
+                                // Create updated student data with possible photo URL from response
+                                const updatedStudent = { 
+                                    ...studentsData[index],
+                                    name,
+                                    registration_number: regNumber,
+                                    course,
+                                    level_of_study: level,
+                                    national_id: nationalId || null,
+                                    birth_certificate: birthCert || null,
+                                    date_of_birth: dob || null,
+                                    status
+                                };
+                                
+                                // If response includes photo_url, update it
+                                if (result.data && result.data.photo_url) {
+                                    updatedStudent.photo_url = result.data.photo_url;
+                                }
+                                
+                                studentsData[index] = updatedStudent;
                             }
                             
                             showToast('Student information updated successfully', 'success');
@@ -1060,9 +1108,10 @@
                     break;
                 case 'promoteStudentForm':
                     payload = {
-                        registration_number: formData.promoteStudentReg,
-                        new_level_of_study: formData.newYearSemester
+                        registration_number: formData.promoteStudentReg,  // Updated to match API expectations
+                        new_level: formData.newYearSemester
                     };
+                    console.log('Student promotion payload:', payload);
                     break;
                 case 'grantLeaveForm':
                     payload = {
