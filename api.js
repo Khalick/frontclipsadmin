@@ -117,53 +117,162 @@
             }
         }
 
+        // Debug logging utility
+        function debugLog(message, data) {
+            const DEBUG = true; // Set to false in production
+            if (DEBUG) {
+                console.log(`%c${message}`, 'color: #0066ff; font-weight: bold;', data);
+            }
+        }
+
         // API request helper with better error handling
         async function apiRequest(url, options = {}) {
             try {
+                debugLog(`API Request to ${url}`, { method: options.method || 'GET' });
+                
                 const token = localStorage.getItem(ADMIN_TOKEN_KEY);
+                const isFormData = options.body instanceof FormData;
                 
-                // Set up headers based on whether this is a file upload or not
-                let headers = {
-                    'Accept': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                };
+                // Clone the options to avoid modifying the original
+                const fetchOptions = { ...options };
                 
-                // Only add Content-Type for non-FormData requests
-                if (!(options.body instanceof FormData)) {
-                    headers['Content-Type'] = 'application/json';
+                // Initialize headers
+                fetchOptions.headers = { ...options.headers } || {};
+                
+                // Add authorization token if available
+                if (token) {
+                    fetchOptions.headers['Authorization'] = `Bearer ${token}`;
                 }
                 
-                const response = await fetch(`${API_BASE_URL}${url}`, {
-                    headers: {
-                        ...headers,
-                        ...options.headers
-                    },
-                    ...options
-                });
+                // Accept JSON responses
+                fetchOptions.headers['Accept'] = 'application/json';
+                
+                // For FormData, DO NOT set Content-Type header - let the browser handle it with the proper boundary
+                if (isFormData) {
+                    // Remove any Content-Type header if set, so browser will set it automatically with boundary
+                    delete fetchOptions.headers['Content-Type'];
+                    
+                    debugLog(`Sending FormData to ${url}`, {
+                        fields: [...options.body.keys()],
+                        method: options.method || 'GET',
+                        fileFields: [...options.body.keys()].filter(key => {
+                            const value = options.body.get(key);
+                            return value instanceof File || value instanceof Blob;
+                        }).map(key => ({
+                            key,
+                            fileName: options.body.get(key).name,
+                            fileType: options.body.get(key).type,
+                            fileSize: options.body.get(key).size
+                        }))
+                    });
+                } else if (!fetchOptions.headers['Content-Type']) {
+                    // For non-FormData requests, set Content-Type to application/json if not set
+                    fetchOptions.headers['Content-Type'] = 'application/json';
+                }
+                
+                const response = await fetch(`${API_BASE_URL}${url}`, fetchOptions);
 
                 // Check if response is JSON
                 const contentType = response.headers.get('content-type');
                 let data;
                 
-                if (contentType && contentType.includes('application/json')) {
-                    data = await response.json();
-                } else {
-                    const text = await response.text();
-                    data = { error: text || `HTTP ${response.status}: ${response.statusText}` };
+                debugLog(`API Response status: ${response.status}`, { 
+                    contentType,
+                    url,
+                    method: options.method || 'GET'
+                });
+                
+                try {
+                    // Try JSON first if content type suggests JSON
+                    if (contentType && contentType.includes('application/json')) {
+                        data = await response.json();
+                        debugLog('API Response data (JSON):', data);
+                    } else {
+                        // If not JSON, get text
+                        const text = await response.text();
+                        debugLog('API Response text:', text);
+                        
+                        // Try to parse as JSON anyway in case Content-Type is wrong
+                        if (text && text.trim() && (text.startsWith('{') || text.startsWith('['))) {
+                            try {
+                                data = JSON.parse(text);
+                                debugLog('Parsed text response as JSON:', data);
+                            } catch (parseError) {
+                                // Not valid JSON after all
+                                data = { error: text || `HTTP ${response.status}: ${response.statusText}` };
+                            }
+                        } else {
+                            // Plain text response
+                            data = { error: text || `HTTP ${response.status}: ${response.statusText}` };
+                        }
+                    }
+                } catch (parseError) {
+                    debugLog('Error parsing response:', parseError.message);
+                    data = { 
+                        error: `Failed to parse server response: ${parseError.message}`,
+                        status: response.status
+                    };
                 }
                 
                 if (!response.ok) {
-                    throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+                    // Check if the error is in a structured format
+                    if (data && data.error) {
+                        let errorMessage = data.error;
+                        // If there are details, append them
+                        if (data.details) {
+                            errorMessage += `: ${data.details}`;
+                        }
+                        // If there's help text, log it
+                        if (data.help) {
+                            console.log(`API Error Help: ${data.help}`);
+                            debugLog('API Error Help:', data.help);
+                        }
+                        
+                        // Special handling for form data errors
+                        if (errorMessage.includes('FormData') && options.body instanceof FormData) {
+                            console.log('FormData parsing error details:', new Error(errorMessage));
+                            debugLog('FormData contents:', {
+                                fieldCount: [...options.body.keys()].length,
+                                fields: [...options.body.keys()],
+                                hasFiles: [...options.body.values()].some(v => v instanceof File)
+                            });
+                        }
+                        
+                        throw new Error(errorMessage);
+                    } else {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}. ${data ? JSON.stringify(data) : ''}`);
+                    }
                 }
 
                 return { success: true, data };
             } catch (error) {
                 console.error('API Request failed:', error);
+                
+                // Enhanced error handling with more specific messages
+                let errorMessage = error.message;
+                
+                if (error.message.includes('FormData')) {
+                    console.log('FormData parsing error details:', error);
+                    errorMessage = 'Error with file upload format. Please try again with a different file or contact support.';
+                } else if (error.message.includes('Failed to fetch')) {
+                    errorMessage = 'Network error. Please check your connection.';
+                } else if (error.message.includes('500')) {
+                    errorMessage = 'Server error. The operation could not be completed. The server team has been notified.';
+                } else if (error.message.includes('400') && options.body instanceof FormData) {
+                    errorMessage = 'Error with file upload. The server could not process your file.';
+                    console.log('Form data upload error:', error);
+                } else if (error.message.includes('404')) {
+                    errorMessage = 'Resource not found. Please check the URL and try again.';
+                } else if (error.message.includes('401')) {
+                    errorMessage = 'Authentication error. Please log in again.';
+                    // If authentication error, clear token
+                    localStorage.removeItem(ADMIN_TOKEN_KEY);
+                }
+                
                 return { 
                     success: false, 
-                    error: error.message.includes('Failed to fetch') 
-                        ? 'Network error. Please check your connection.' 
-                        : error.message 
+                    error: errorMessage,
+                    originalError: error.message
                 };
             }
         }        // Student management functions
@@ -889,7 +998,7 @@
                             formData.append('status', status);
                             formData.append('photo', photoInput.files[0]);
                             
-                            console.log('Sending update for student with photo:', studentId);
+                            debugLog('Sending update for student with photo:', formData);
                             
                             result = await apiRequest(`/students/${studentId}`, {
                                 method: 'PUT',
@@ -909,7 +1018,7 @@
                                 status
                             };
                             
-                            console.log('Sending update for student:', studentId, payload);
+                            debugLog('Sending update for student:', payload);
                             
                             result = await apiRequest(`/students/${studentId}`, {
                                 method: 'PUT',
@@ -1064,6 +1173,7 @@
             // Transform data based on form type
             let payload = {};
             let isFileUpload = false;
+            let contentType = null;
             
             switch(formId) {
                 case 'registerStudentForm':
@@ -1133,52 +1243,232 @@
                     break;
                 case 'examCardForm':
                     isFileUpload = true;
+                    
+                    // Validate the file
+                    const examCardFile = $('examCardFile');
+                    if (!examCardFile || !examCardFile.files || examCardFile.files.length === 0) {
+                        showStatus(form.querySelector('.status-message').id, 'Please select a file to upload', 'error');
+                        return;
+                    }
+                    
+                    // Validate file type - only PDF allowed
+                    const examCardFileType = examCardFile.files[0].type;
+                    const allowedTypes = ['application/pdf'];
+                    if (!allowedTypes.includes(examCardFileType) && !examCardFile.files[0].name.toLowerCase().endsWith('.pdf')) {
+                        showStatus(form.querySelector('.status-message').id, 'Please upload a PDF file only', 'error');
+                        return;
+                    }
+                    
+                    // Validate file size (max 5MB)
+                    const maxSize = 5 * 1024 * 1024; // 5MB
+                    if (examCardFile.files[0].size > maxSize) {
+                        showStatus(form.querySelector('.status-message').id, 'File size should be less than 5MB', 'error');
+                        return;
+                    }
+                    
+                    // Create a fresh FormData object for multipart/form-data upload
                     const examCardFormData = new FormData();
-                    examCardFormData.append('student_reg', formData.examCardStudentReg);
-                    examCardFormData.append('exam_card', $('examCardFile').files[0]);
+                    
+                    // Ensure properly formatted field names
+                    const regNumber = formData.examCardStudentReg.trim();
+                    const fileObj = examCardFile.files[0];
+                    
+                    // Verify we have valid data before proceeding
+                    if (!regNumber) {
+                        showStatus(form.querySelector('.status-message').id, 'Please enter a valid registration number', 'error');
+                        return;
+                    }
+                    
+                    if (!fileObj || fileObj.size === 0) {
+                        showStatus(form.querySelector('.status-message').id, 'Please select a valid file', 'error');
+                        return;
+                    }
+                    
+                    // Add fields to FormData
+                    examCardFormData.append('registration_number', regNumber);
+                    examCardFormData.append('exam_card', fileObj);
+                    
+                    // Verify FormData was constructed correctly
+                    if ([...examCardFormData.keys()].length !== 2) {
+                        showStatus(form.querySelector('.status-message').id, 'Error creating form data. Please try again.', 'error');
+                        return;
+                    }
+                    
+                    // Log what we're sending
+                    debugLog('Exam card upload payload:', {
+                        registration_number: regNumber,
+                        file_name: fileObj.name,
+                        file_type: fileObj.type,
+                        file_size: `${(fileObj.size / 1024).toFixed(2)} KB`,
+                        form_data_entries: [...examCardFormData.entries()].map(([key, value]) => {
+                            if (value instanceof File) {
+                                return { key, type: 'File', name: value.name, size: value.size };
+                            }
+                            return { key, value };
+                        })
+                    });
+                    
                     payload = examCardFormData;
                     break;
                 case 'feesForm':
-                    payload = {
-                        student_reg: formData.feesStudentReg,
-                        fee_balance: parseFloat(formData.feeBalance),
-                        total_paid: parseFloat(formData.totalPaid),
-                        semester_fee: parseFloat(formData.semesterFee)
-                    };
+                    // Check if there's an optional fees statement file
+                    const feesStatementFile = $('feesStatementFile');
+                    
+                    if (feesStatementFile && feesStatementFile.files && feesStatementFile.files.length > 0) {
+                        // File upload case - validate PDF file
+                        isFileUpload = true;
+                        
+                        // Validate file type - only PDF allowed
+                        const feesFileType = feesStatementFile.files[0].type;
+                        if (feesFileType !== 'application/pdf' && !feesStatementFile.files[0].name.toLowerCase().endsWith('.pdf')) {
+                            showStatus(form.querySelector('.status-message').id, 'Please upload a PDF file only', 'error');
+                            return;
+                        }
+                        
+                        // Validate file size (max 5MB)
+                        const feesMaxSize = 5 * 1024 * 1024; // 5MB
+                        if (feesStatementFile.files[0].size > feesMaxSize) {
+                            showStatus(form.querySelector('.status-message').id, 'File size should be less than 5MB', 'error');
+                            return;
+                        }
+                        
+                        // Create FormData for file upload
+                        const feesFormData = new FormData();
+                        feesFormData.append('registration_number', formData.feesStudentReg);
+                        feesFormData.append('fee_balance', formData.feeBalance);
+                        feesFormData.append('total_paid', formData.totalPaid);
+                        feesFormData.append('semester_fee', formData.semesterFee);
+                        feesFormData.append('fees_statement', feesStatementFile.files[0]);
+                        
+                        payload = feesFormData;
+                    } else {
+                        // No file upload - just JSON data
+                        payload = {
+                            registration_number: formData.feesStudentReg,
+                            fee_balance: parseFloat(formData.feeBalance),
+                            total_paid: parseFloat(formData.totalPaid),
+                            semester_fee: parseFloat(formData.semesterFee)
+                        };
+                    }
+                    
+                    debugLog('Fees update payload:', payload);
                     break;
                 case 'financeForm':
                     isFileUpload = true;
+                    
+                    // Validate the file
+                    const financeFile = $('financeFile');
+                    if (!financeFile || !financeFile.files || financeFile.files.length === 0) {
+                        showStatus(form.querySelector('.status-message').id, 'Please select a file to upload', 'error');
+                        return;
+                    }
+                    
+                    // Validate file type - only PDF allowed
+                    const financeFileType = financeFile.files[0].type;
+                    if (financeFileType !== 'application/pdf' && !financeFile.files[0].name.toLowerCase().endsWith('.pdf')) {
+                        showStatus(form.querySelector('.status-message').id, 'Please upload a PDF file only', 'error');
+                        return;
+                    }
+                    
+                    // Validate file size (max 5MB)
+                    const financeMaxSize = 5 * 1024 * 1024; // 5MB
+                    if (financeFile.files[0].size > financeMaxSize) {
+                        showStatus(form.querySelector('.status-message').id, 'File size should be less than 5MB', 'error');
+                        return;
+                    }
+                    
                     const financeFormData = new FormData();
-                    financeFormData.append('student_reg', formData.financeStudentReg);
+                    financeFormData.append('registration_number', formData.financeStudentReg);
                     financeFormData.append('document_type', formData.documentType);
-                    financeFormData.append('file', $('financeFile').files[0]);
+                    financeFormData.append('document', financeFile.files[0]);  // Changed 'file' to 'document' to match API expectations
+                    
+                    console.log('Finance upload payload:', {
+                        registration_number: formData.financeStudentReg,
+                        document_type: formData.documentType,
+                        document: 'File data'
+                    });
+                    
                     payload = financeFormData;
                     break;
                 case 'resultsForm':
-                    try {
-                        const resultsDataJson = JSON.parse(formData.resultsData);
-                        payload = {
-                            student_reg: formData.resultsStudentReg,
-                            semester: parseInt(formData.resultsSemester),
-                            result_data: resultsDataJson
-                        };
-                    } catch (e) {
-                        showStatus(form.querySelector('.status-message').id, 'Invalid JSON format for results data', 'error');
+                    isFileUpload = true;
+                    
+                    // Validate the file
+                    const resultsFile = $('resultsFile');
+                    if (!resultsFile || !resultsFile.files || resultsFile.files.length === 0) {
+                        showStatus(form.querySelector('.status-message').id, 'Please select a file to upload', 'error');
                         return;
                     }
+                    
+                    // Validate file type - only PDF allowed
+                    const resultsFileType = resultsFile.files[0].type;
+                    if (resultsFileType !== 'application/pdf' && !resultsFile.files[0].name.toLowerCase().endsWith('.pdf')) {
+                        showStatus(form.querySelector('.status-message').id, 'Please upload a PDF file only', 'error');
+                        return;
+                    }
+                    
+                    // Validate file size (max 5MB)
+                    const resultsMaxSize = 5 * 1024 * 1024; // 5MB
+                    if (resultsFile.files[0].size > resultsMaxSize) {
+                        showStatus(form.querySelector('.status-message').id, 'File size should be less than 5MB', 'error');
+                        return;
+                    }
+                    
+                    // Create FormData
+                    const resultsFormData = new FormData();
+                    resultsFormData.append('registration_number', formData.resultsStudentReg);
+                    resultsFormData.append('semester', formData.resultsSemester);
+                    resultsFormData.append('results_file', resultsFile.files[0]);
+                    
+                    debugLog('Results upload payload:', {
+                        registration_number: formData.resultsStudentReg,
+                        semester: formData.resultsSemester,
+                        file_name: resultsFile.files[0].name,
+                        file_type: resultsFile.files[0].type,
+                        file_size: `${(resultsFile.files[0].size / 1024).toFixed(2)} KB`
+                    });
+                    
+                    payload = resultsFormData;
                     break;
                 case 'timetableForm':
-                    try {
-                        const timetableDataJson = JSON.parse(formData.timetableData);
-                        payload = {
-                            student_reg: formData.timetableStudentReg,
-                            semester: parseInt(formData.timetableSemester),
-                            timetable_data: timetableDataJson
-                        };
-                    } catch (e) {
-                        showStatus(form.querySelector('.status-message').id, 'Invalid JSON format for timetable data', 'error');
+                    isFileUpload = true;
+                    
+                    // Validate the file
+                    const timetableFile = $('timetableFile');
+                    if (!timetableFile || !timetableFile.files || timetableFile.files.length === 0) {
+                        showStatus(form.querySelector('.status-message').id, 'Please select a file to upload', 'error');
                         return;
                     }
+                    
+                    // Validate file type - only PDF allowed
+                    const timetableFileType = timetableFile.files[0].type;
+                    if (timetableFileType !== 'application/pdf' && !timetableFile.files[0].name.toLowerCase().endsWith('.pdf')) {
+                        showStatus(form.querySelector('.status-message').id, 'Please upload a PDF file only', 'error');
+                        return;
+                    }
+                    
+                    // Validate file size (max 5MB)
+                    const timetableMaxSize = 5 * 1024 * 1024; // 5MB
+                    if (timetableFile.files[0].size > timetableMaxSize) {
+                        showStatus(form.querySelector('.status-message').id, 'File size should be less than 5MB', 'error');
+                        return;
+                    }
+                    
+                    // Create FormData
+                    const timetableFormData = new FormData();
+                    timetableFormData.append('registration_number', formData.timetableStudentReg);
+                    timetableFormData.append('semester', formData.timetableSemester);
+                    timetableFormData.append('timetable_file', timetableFile.files[0]);
+                    
+                    debugLog('Timetable upload payload:', {
+                        registration_number: formData.timetableStudentReg,
+                        semester: formData.timetableSemester,
+                        file_name: timetableFile.files[0].name,
+                        file_type: timetableFile.files[0].type,
+                        file_size: `${(timetableFile.files[0].size / 1024).toFixed(2)} KB`
+                    });
+                    
+                    payload = timetableFormData;
                     break;
                 default:
                     payload = formData;
@@ -1195,13 +1485,32 @@
             };
             
             if (isFileUpload) {
-                // For file uploads, don't set Content-Type header (browser will set it with boundary)
+                // For file uploads with FormData, let the browser set the Content-Type with boundary
                 requestOptions.body = payload; // FormData object
+                
+                // Log the FormData field names for debugging
+                const formDataFields = [...payload.keys()];
+                const hasFiles = [...payload.values()].some(v => v instanceof File);
+                
+                debugLog('Sending FormData request', {
+                    url,
+                    method,
+                    fields: formDataFields,
+                    hasFiles,
+                    contentType: 'multipart/form-data (set by browser)'
+                });
             } else {
+                // For JSON requests
                 requestOptions.body = JSON.stringify(payload);
                 requestOptions.headers = {
                     'Content-Type': 'application/json'
                 };
+                
+                debugLog('Sending JSON request', {
+                    url,
+                    method,
+                    payload
+                });
             }
             
             const result = await apiRequest(url, requestOptions);
@@ -1236,6 +1545,15 @@
             if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
                 document.body.classList.add('auto-dark-mode');
             }
+            
+            // Setup file preview for exam card uploads
+            setupExamCardFilePreview();
+            
+            // Setup PDF file preview for all PDF upload forms
+            setupPdfFilePreview('financeFile', 'financePreview', 'financeFileInfo');
+            setupPdfFilePreview('resultsFile', 'resultsPreview', 'resultsFileInfo');
+            setupPdfFilePreview('timetableFile', 'timetablePreview', 'timetableFileInfo');
+            setupPdfFilePreview('feesStatementFile', 'feesStatementPreview', 'feesStatementFileInfo');
             
             // Check login status
             const adminToken = localStorage.getItem(ADMIN_TOKEN_KEY);
@@ -1326,3 +1644,176 @@
         window.fetchStudents = fetchStudents;
         window.saveStudentChanges = saveStudentChanges;
         window.updateStudentStatus = updateStudentStatus;
+        window.setupExamCardFilePreview = setupExamCardFilePreview;
+        window.debugLog = debugLog;
+
+        // Setup file preview functionality for exam card upload
+        function setupExamCardFilePreview() {
+            const examCardFileInput = $('examCardFile');
+            const examCardPreview = $('examCardPreview');
+            const examCardFileInfo = $('examCardFileInfo');
+            
+            if (!examCardFileInput || !examCardPreview || !examCardFileInfo) return;
+            
+            examCardFileInput.addEventListener('change', function() {
+                // Clear previous preview
+                examCardPreview.innerHTML = '';
+                examCardFileInfo.innerHTML = '';
+                
+                // Clear any custom validity
+                this.setCustomValidity('');
+                
+                if (this.files && this.files.length > 0) {
+                    const file = this.files[0];
+                    let hasErrors = false;
+                    
+                    // Display file info
+                    const fileSize = (file.size / 1024).toFixed(2) + ' KB';
+                    examCardFileInfo.innerHTML = `
+                        <div class="file-details">
+                            <strong>File:</strong> ${file.name}<br>
+                            <strong>Type:</strong> ${file.type}<br>
+                            <strong>Size:</strong> ${fileSize}
+                        </div>
+                    `;
+                    
+                    // Validate file type - only PDF allowed
+                    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+                    
+                    if (isPdf) {
+                        examCardPreview.innerHTML = `
+                            <div class="pdf-preview">
+                                <i class="fas fa-file-pdf pdf-icon"></i>
+                                <span>PDF Document</span>
+                            </div>
+                        `;
+                    } else {
+                        hasErrors = true;
+                        examCardPreview.innerHTML = `
+                            <div class="invalid-file-preview">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>Invalid file type (PDF required)</span>
+                            </div>
+                        `;
+                        
+                        examCardFileInfo.innerHTML += `
+                            <div class="validation-error">
+                                Error: Only PDF files are allowed.
+                            </div>
+                        `;
+                        
+                        // Set custom validity to prevent form submission
+                        this.setCustomValidity('Only PDF files are allowed.');
+                    }
+                    
+                    // Validate file size (max 5MB)
+                    const maxSize = 5 * 1024 * 1024; // 5MB
+                    if (file.size > maxSize) {
+                        hasErrors = true;
+                        examCardFileInfo.innerHTML += `
+                            <div class="validation-error">
+                                Error: File size must be less than 5MB.
+                            </div>
+                        `;
+                        
+                        // Set custom validity to prevent form submission
+                        this.setCustomValidity('File size must be less than 5MB.');
+                    }
+                    
+                    // If no errors, clear custom validity
+                    if (!hasErrors) {
+                        this.setCustomValidity('');
+                    }
+                } else {
+                    // No file selected, clear validity
+                    this.setCustomValidity('');
+                }
+            });
+        }
+
+        // Initialize file preview setup
+        document.addEventListener('DOMContentLoaded', setupExamCardFilePreview);
+        
+        // Setup PDF file preview functionality (reusable for all PDF forms)
+        function setupPdfFilePreview(fileInputId, previewId, infoId) {
+            const fileInput = $(fileInputId);
+            const previewDiv = $(previewId);
+            const fileInfoDiv = $(infoId);
+            
+            if (!fileInput || !previewDiv || !fileInfoDiv) return;
+            
+            fileInput.addEventListener('change', function() {
+                // Clear previous preview
+                previewDiv.innerHTML = '';
+                fileInfoDiv.innerHTML = '';
+                
+                // Clear any custom validity
+                this.setCustomValidity('');
+                
+                if (this.files && this.files.length > 0) {
+                    const file = this.files[0];
+                    let hasErrors = false;
+                    
+                    // Display file info
+                    const fileSize = (file.size / 1024).toFixed(2) + ' KB';
+                    fileInfoDiv.innerHTML = `
+                        <div class="file-details">
+                            <strong>File:</strong> ${file.name}<br>
+                            <strong>Type:</strong> ${file.type}<br>
+                            <strong>Size:</strong> ${fileSize}
+                        </div>
+                    `;
+                    
+                    // Validate file type - only PDF allowed
+                    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+                    
+                    if (isPdf) {
+                        previewDiv.innerHTML = `
+                            <div class="pdf-preview">
+                                <i class="fas fa-file-pdf pdf-icon"></i>
+                                <span>PDF Document</span>
+                            </div>
+                        `;
+                    } else {
+                        hasErrors = true;
+                        previewDiv.innerHTML = `
+                            <div class="invalid-file-preview">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>Invalid file type (PDF required)</span>
+                            </div>
+                        `;
+                        
+                        fileInfoDiv.innerHTML += `
+                            <div class="validation-error">
+                                Error: Only PDF files are allowed.
+                            </div>
+                        `;
+                        
+                        // Set custom validity to prevent form submission
+                        this.setCustomValidity('Only PDF files are allowed.');
+                    }
+                    
+                    // Validate file size (max 5MB)
+                    const maxSize = 5 * 1024 * 1024; // 5MB
+                    if (file.size > maxSize) {
+                        hasErrors = true;
+                        fileInfoDiv.innerHTML += `
+                            <div class="validation-error">
+                                Error: File size must be less than 5MB.
+                            </div>
+                        `;
+                        
+                        // Set custom validity to prevent form submission
+                        this.setCustomValidity('File size must be less than 5MB.');
+                    }
+                    
+                    // If no errors, clear custom validity
+                    if (!hasErrors) {
+                        this.setCustomValidity('');
+                    }
+                } else {
+                    // No file selected, clear validity
+                    this.setCustomValidity('');
+                }
+            });
+        }
