@@ -1286,7 +1286,7 @@
                     
                     // Add fields to FormData
                     examCardFormData.append('registration_number', regNumber);
-                    examCardFormData.append('exam_card', fileObj);
+                    examCardFormData.append('file', fileObj);
                     
                     // Verify FormData was constructed correctly
                     if ([...examCardFormData.keys()].length !== 2) {
