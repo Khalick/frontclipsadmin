@@ -132,6 +132,7 @@
                 
                 const token = localStorage.getItem(ADMIN_TOKEN_KEY);
                 const isFormData = options.body instanceof FormData;
+                const isBinaryFile = options.body instanceof File;
                 
                 // Clone the options to avoid modifying the original
                 const fetchOptions = { ...options };
@@ -147,9 +148,9 @@
                 // Accept JSON responses
                 fetchOptions.headers['Accept'] = 'application/json';
                 
-                // For FormData, DO NOT set Content-Type header - let the browser handle it with the proper boundary
+                // Handle different upload types
                 if (isFormData) {
-                    // Remove any Content-Type header if set, so browser will set it automatically with boundary
+                    // For FormData, DO NOT set Content-Type header - let the browser handle it with the proper boundary
                     delete fetchOptions.headers['Content-Type'];
                     
                     debugLog(`Sending FormData to ${url}`, {
@@ -165,8 +166,19 @@
                             fileSize: options.body.get(key).size
                         }))
                     });
+                } else if (isBinaryFile) {
+                    // For binary file uploads, keep the Content-Type set by the caller
+                    // The Content-Type should already be set in the request options
+                    
+                    debugLog(`Sending binary file to ${url}`, {
+                        fileName: options.body.name,
+                        fileType: options.body.type,
+                        fileSize: `${(options.body.size / 1024).toFixed(2)} KB`,
+                        method: options.method || 'GET',
+                        contentType: fetchOptions.headers['Content-Type']
+                    });
                 } else if (!fetchOptions.headers['Content-Type']) {
-                    // For non-FormData requests, set Content-Type to application/json if not set
+                    // For non-file requests, set Content-Type to application/json if not set
                     fetchOptions.headers['Content-Type'] = 'application/json';
                 }
                 
@@ -1266,9 +1278,6 @@
                         return;
                     }
                     
-                    // Create a fresh FormData object for multipart/form-data upload
-                    const examCardFormData = new FormData();
-                    
                     // Ensure properly formatted field names
                     const regNumber = formData.examCardStudentReg.trim();
                     const fileObj = examCardFile.files[0];
@@ -1284,31 +1293,18 @@
                         return;
                     }
                     
-                    // Add fields to FormData
-                    examCardFormData.append('registration_number', regNumber);
-                    examCardFormData.append('file', fileObj);
-                    
-                    // Verify FormData was constructed correctly
-                    if ([...examCardFormData.keys()].length !== 2) {
-                        showStatus(form.querySelector('.status-message').id, 'Error creating form data. Please try again.', 'error');
-                        return;
-                    }
+                    // Handle as binary upload - send file directly with registration number in URL or headers
+                    url = `/exam-cards/${encodeURIComponent(regNumber)}`;
+                    payload = fileObj; // Send file directly as binary data
                     
                     // Log what we're sending
-                    debugLog('Exam card upload payload:', {
+                    debugLog('Exam card binary upload:', {
                         registration_number: regNumber,
                         file_name: fileObj.name,
                         file_type: fileObj.type,
                         file_size: `${(fileObj.size / 1024).toFixed(2)} KB`,
-                        form_data_entries: [...examCardFormData.entries()].map(([key, value]) => {
-                            if (value instanceof File) {
-                                return { key, type: 'File', name: value.name, size: value.size };
-                            }
-                            return { key, value };
-                        })
+                        upload_method: 'binary'
                     });
-                    
-                    payload = examCardFormData;
                     break;
                 case 'feesForm':
                     // Check if there's an optional fees statement file
@@ -1377,18 +1373,20 @@
                         return;
                     }
                     
-                    const financeFormData = new FormData();
-                    financeFormData.append('registration_number', formData.financeStudentReg);
-                    financeFormData.append('document_type', formData.documentType);
-                    financeFormData.append('document', financeFile.files[0]);  // Changed 'file' to 'document' to match API expectations
+                    const financeFileObj = financeFile.files[0];
                     
-                    console.log('Finance upload payload:', {
+                    // Handle as binary upload with metadata in URL
+                    url = `/finance/${encodeURIComponent(formData.financeStudentReg)}/${encodeURIComponent(formData.documentType)}`;
+                    payload = financeFileObj; // Send file directly as binary data
+                    
+                    debugLog('Finance binary upload:', {
                         registration_number: formData.financeStudentReg,
                         document_type: formData.documentType,
-                        document: 'File data'
+                        file_name: financeFileObj.name,
+                        file_type: financeFileObj.type,
+                        file_size: `${(financeFileObj.size / 1024).toFixed(2)} KB`,
+                        upload_method: 'binary'
                     });
-                    
-                    payload = financeFormData;
                     break;
                 case 'resultsForm':
                     isFileUpload = true;
@@ -1414,21 +1412,20 @@
                         return;
                     }
                     
-                    // Create FormData
-                    const resultsFormData = new FormData();
-                    resultsFormData.append('registration_number', formData.resultsStudentReg);
-                    resultsFormData.append('semester', formData.resultsSemester);
-                    resultsFormData.append('results_file', resultsFile.files[0]);
+                    const resultsFileObj = resultsFile.files[0];
                     
-                    debugLog('Results upload payload:', {
+                    // Handle as binary upload with metadata in URL
+                    url = `/results/${encodeURIComponent(formData.resultsStudentReg)}/${encodeURIComponent(formData.resultsSemester)}`;
+                    payload = resultsFileObj; // Send file directly as binary data
+                    
+                    debugLog('Results binary upload:', {
                         registration_number: formData.resultsStudentReg,
                         semester: formData.resultsSemester,
-                        file_name: resultsFile.files[0].name,
-                        file_type: resultsFile.files[0].type,
-                        file_size: `${(resultsFile.files[0].size / 1024).toFixed(2)} KB`
+                        file_name: resultsFileObj.name,
+                        file_type: resultsFileObj.type,
+                        file_size: `${(resultsFileObj.size / 1024).toFixed(2)} KB`,
+                        upload_method: 'binary'
                     });
-                    
-                    payload = resultsFormData;
                     break;
                 case 'timetableForm':
                     isFileUpload = true;
@@ -1454,21 +1451,20 @@
                         return;
                     }
                     
-                    // Create FormData
-                    const timetableFormData = new FormData();
-                    timetableFormData.append('registration_number', formData.timetableStudentReg);
-                    timetableFormData.append('semester', formData.timetableSemester);
-                    timetableFormData.append('timetable_file', timetableFile.files[0]);
+                    const timetableFileObj = timetableFile.files[0];
                     
-                    debugLog('Timetable upload payload:', {
+                    // Handle as binary upload with metadata in URL
+                    url = `/timetables/${encodeURIComponent(formData.timetableStudentReg)}/${encodeURIComponent(formData.timetableSemester)}`;
+                    payload = timetableFileObj; // Send file directly as binary data
+                    
+                    debugLog('Timetable binary upload:', {
                         registration_number: formData.timetableStudentReg,
                         semester: formData.timetableSemester,
-                        file_name: timetableFile.files[0].name,
-                        file_type: timetableFile.files[0].type,
-                        file_size: `${(timetableFile.files[0].size / 1024).toFixed(2)} KB`
+                        file_name: timetableFileObj.name,
+                        file_type: timetableFileObj.type,
+                        file_size: `${(timetableFileObj.size / 1024).toFixed(2)} KB`,
+                        upload_method: 'binary'
                     });
-                    
-                    payload = timetableFormData;
                     break;
                 default:
                     payload = formData;
@@ -1485,20 +1481,38 @@
             };
             
             if (isFileUpload) {
-                // For file uploads with FormData, let the browser set the Content-Type with boundary
-                requestOptions.body = payload; // FormData object
-                
-                // Log the FormData field names for debugging
-                const formDataFields = [...payload.keys()];
-                const hasFiles = [...payload.values()].some(v => v instanceof File);
-                
-                debugLog('Sending FormData request', {
-                    url,
-                    method,
-                    fields: formDataFields,
-                    hasFiles,
-                    contentType: 'multipart/form-data (set by browser)'
-                });
+                // Check if payload is a File object (binary upload) or FormData
+                if (payload instanceof File) {
+                    // Binary file upload - send file directly
+                    requestOptions.body = payload;
+                    requestOptions.headers = {
+                        'Content-Type': payload.type || 'application/octet-stream'
+                    };
+                    
+                    debugLog('Sending binary file request', {
+                        url,
+                        method,
+                        fileName: payload.name,
+                        fileType: payload.type,
+                        fileSize: `${(payload.size / 1024).toFixed(2)} KB`,
+                        contentType: payload.type || 'application/octet-stream'
+                    });
+                } else {
+                    // FormData upload - let the browser set the Content-Type with boundary
+                    requestOptions.body = payload; // FormData object
+                    
+                    // Log the FormData field names for debugging
+                    const formDataFields = [...payload.keys()];
+                    const hasFiles = [...payload.values()].some(v => v instanceof File);
+                    
+                    debugLog('Sending FormData request', {
+                        url,
+                        method,
+                        fields: formDataFields,
+                        hasFiles,
+                        contentType: 'multipart/form-data (set by browser)'
+                    });
+                }
             } else {
                 // For JSON requests
                 requestOptions.body = JSON.stringify(payload);
