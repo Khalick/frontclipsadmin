@@ -1186,6 +1186,7 @@
             let payload = {};
             let isFileUpload = false;
             let contentType = null;
+            let binaryHeaders = null; // For binary uploads
             
             switch(formId) {
                 case 'registerStudentForm':
@@ -1293,9 +1294,16 @@
                         return;
                     }
                     
-                    // Handle as binary upload - send file directly with registration number in URL or headers
-                    url = `/exam-cards/${encodeURIComponent(regNumber)}`;
-                    payload = fileObj; // Send file directly as binary data
+                    // Handle as binary upload - convert file to ArrayBuffer and send with headers
+                    url = `/exam-cards/upload`;
+                    payload = await fileObj.arrayBuffer(); // Convert file to ArrayBuffer
+                    contentType = fileObj.type || 'application/octet-stream';
+                    
+                    // Store additional headers for binary upload
+                    binaryHeaders = {
+                        'X-Registration-Number': regNumber,
+                        'X-Filename': fileObj.name
+                    };
                     
                     // Log what we're sending
                     debugLog('Exam card binary upload:', {
@@ -1303,7 +1311,8 @@
                         file_name: fileObj.name,
                         file_type: fileObj.type,
                         file_size: `${(fileObj.size / 1024).toFixed(2)} KB`,
-                        upload_method: 'binary'
+                        upload_method: 'binary',
+                        headers: binaryHeaders
                     });
                     break;
                 case 'feesForm':
@@ -1375,9 +1384,17 @@
                     
                     const financeFileObj = financeFile.files[0];
                     
-                    // Handle as binary upload with metadata in URL
-                    url = `/finance/${encodeURIComponent(formData.financeStudentReg)}/${encodeURIComponent(formData.documentType)}`;
-                    payload = financeFileObj; // Send file directly as binary data
+                    // Handle as binary upload with metadata in headers
+                    url = `/finance/upload`;
+                    payload = await financeFileObj.arrayBuffer(); // Convert file to ArrayBuffer
+                    contentType = financeFileObj.type || 'application/octet-stream';
+                    
+                    // Store additional headers for binary upload
+                    binaryHeaders = {
+                        'X-Registration-Number': formData.financeStudentReg,
+                        'X-Document-Type': formData.documentType,
+                        'X-Filename': financeFileObj.name
+                    };
                     
                     debugLog('Finance binary upload:', {
                         registration_number: formData.financeStudentReg,
@@ -1385,7 +1402,8 @@
                         file_name: financeFileObj.name,
                         file_type: financeFileObj.type,
                         file_size: `${(financeFileObj.size / 1024).toFixed(2)} KB`,
-                        upload_method: 'binary'
+                        upload_method: 'binary',
+                        headers: binaryHeaders
                     });
                     break;
                 case 'resultsForm':
@@ -1414,9 +1432,17 @@
                     
                     const resultsFileObj = resultsFile.files[0];
                     
-                    // Handle as binary upload with metadata in URL
-                    url = `/results/${encodeURIComponent(formData.resultsStudentReg)}/${encodeURIComponent(formData.resultsSemester)}`;
-                    payload = resultsFileObj; // Send file directly as binary data
+                    // Handle as binary upload with metadata in headers
+                    url = `/results/upload`;
+                    payload = await resultsFileObj.arrayBuffer(); // Convert file to ArrayBuffer
+                    contentType = resultsFileObj.type || 'application/octet-stream';
+                    
+                    // Store additional headers for binary upload
+                    binaryHeaders = {
+                        'X-Registration-Number': formData.resultsStudentReg,
+                        'X-Semester': formData.resultsSemester,
+                        'X-Filename': resultsFileObj.name
+                    };
                     
                     debugLog('Results binary upload:', {
                         registration_number: formData.resultsStudentReg,
@@ -1424,7 +1450,8 @@
                         file_name: resultsFileObj.name,
                         file_type: resultsFileObj.type,
                         file_size: `${(resultsFileObj.size / 1024).toFixed(2)} KB`,
-                        upload_method: 'binary'
+                        upload_method: 'binary',
+                        headers: binaryHeaders
                     });
                     break;
                 case 'timetableForm':
@@ -1453,9 +1480,17 @@
                     
                     const timetableFileObj = timetableFile.files[0];
                     
-                    // Handle as binary upload with metadata in URL
-                    url = `/timetables/${encodeURIComponent(formData.timetableStudentReg)}/${encodeURIComponent(formData.timetableSemester)}`;
-                    payload = timetableFileObj; // Send file directly as binary data
+                    // Handle as binary upload with metadata in headers
+                    url = `/timetables/upload`;
+                    payload = await timetableFileObj.arrayBuffer(); // Convert file to ArrayBuffer
+                    contentType = timetableFileObj.type || 'application/octet-stream';
+                    
+                    // Store additional headers for binary upload
+                    binaryHeaders = {
+                        'X-Registration-Number': formData.timetableStudentReg,
+                        'X-Semester': formData.timetableSemester,
+                        'X-Filename': timetableFileObj.name
+                    };
                     
                     debugLog('Timetable binary upload:', {
                         registration_number: formData.timetableStudentReg,
@@ -1463,7 +1498,8 @@
                         file_name: timetableFileObj.name,
                         file_type: timetableFileObj.type,
                         file_size: `${(timetableFileObj.size / 1024).toFixed(2)} KB`,
-                        upload_method: 'binary'
+                        upload_method: 'binary',
+                        headers: binaryHeaders
                     });
                     break;
                 default:
@@ -1481,8 +1517,23 @@
             };
             
             if (isFileUpload) {
-                // Check if payload is a File object (binary upload) or FormData
-                if (payload instanceof File) {
+                // Check if payload is ArrayBuffer (binary upload), File object or FormData
+                if (payload instanceof ArrayBuffer) {
+                    // Binary upload with ArrayBuffer
+                    requestOptions.body = payload;
+                    requestOptions.headers = {
+                        'Content-Type': contentType || 'application/octet-stream',
+                        ...(binaryHeaders || {})
+                    };
+                    
+                    debugLog('Sending binary ArrayBuffer request', {
+                        url,
+                        method,
+                        contentType: contentType || 'application/octet-stream',
+                        headers: binaryHeaders,
+                        payloadSize: `${(payload.byteLength / 1024).toFixed(2)} KB`
+                    });
+                } else if (payload instanceof File) {
                     // Binary file upload - send file directly
                     requestOptions.body = payload;
                     requestOptions.headers = {
