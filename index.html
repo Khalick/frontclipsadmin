@@ -904,6 +904,25 @@
             if ($('statusFilter')) $('statusFilter').value = 'all';
         }
         
+        // Update student status in local data
+        function updateStudentStatus(registrationNumber, newStatus) {
+            const studentIndex = studentsData.findIndex(s => s.registration_number === registrationNumber);
+            if (studentIndex !== -1) {
+                studentsData[studentIndex].status = newStatus;
+                // Re-render the table to reflect the status change
+                renderStudentsTable();
+                debugLog(`Updated student status locally`, {
+                    registration_number: registrationNumber,
+                    new_status: newStatus
+                });
+            } else {
+                debugLog(`Student not found for status update`, {
+                    registration_number: registrationNumber,
+                    new_status: newStatus
+                });
+            }
+        }
+        
         
         
         // Search students by name or registration number
