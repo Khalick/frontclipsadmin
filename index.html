@@ -563,7 +563,7 @@
     </div>
     <script>
         // Constants
-        const API_BASE_URL = 'https://studentportaladmin.netlify.app'; // Uses current server origin
+        const API_BASE_URL = 'https://clipscollegebackend.vercel.app' // Uses current server origin
         const ADMIN_TOKEN_KEY = 'adminToken';
         const ADMIN_DATA_KEY = 'adminData';
 
@@ -903,71 +903,8 @@
             if ($('studentSearch')) $('studentSearch').value = '';
             if ($('statusFilter')) $('statusFilter').value = 'all';
         }
-          // Sample data function when no backend is available
-        function getSampleStudentData() {
-            return [
-                {
-                    id: "549d348e-07ce-475a-95de-af122f9a6e78",
-                    registration_number: "STU20256331",
-                    name: "Test Student",
-                    course: "Computer Science",
-                    level_of_study: "Year 1 Semester 1",
-                    photo_url: null,
-                    national_id: "12345678",
-                    birth_certificate: null,
-                    date_of_birth: "2006-01-20T00:00:00.000Z",
-                    status: "active"
-                },
-                {
-                    id: "e63ef8d4-755c-4f71-8b36-748f75469768",
-                    registration_number: "STU20256332",
-                    name: "Sample Student",
-                    course: "Business Administration",
-                    level_of_study: "Undergraduate",
-                    photo_url: null,
-                    national_id: "87654321",
-                    birth_certificate: "BC54321",
-                    date_of_birth: "2001-05-15T00:00:00.000Z",
-                    status: "active"
-                },
-                {
-                    id: "f72a3b8c-9d4e-5f6a-7b8c-9d0e1f2a3b4c",
-                    registration_number: "STU20256333",
-                    name: "John Doe",
-                    course: "Computer Engineering",
-                    level_of_study: "Year 2 Semester 1",
-                    photo_url: null,
-                    national_id: "23456789",
-                    birth_certificate: null,
-                    date_of_birth: "2004-03-10T00:00:00.000Z",
-                    status: "active"
-                },
-                {
-                    id: "a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6",
-                    registration_number: "STU20256334",
-                    name: "Jane Smith",
-                    course: "Electrical Engineering",
-                    level_of_study: "Year 3 Semester 2",
-                    photo_url: null,
-                    national_id: "34567890",
-                    birth_certificate: "BC67890",
-                    date_of_birth: "2002-07-22T00:00:00.000Z",
-                    status: "on-leave"
-                },
-                {
-                    id: "q7r8s9t0-u1v2-w3x4-y5z6-a7b8c9d0e1f2",
-                    registration_number: "STU20256335",
-                    name: "Robert Johnson",
-                    course: "Mechanical Engineering",
-                    level_of_study: "Year 4 Semester 1",
-                    photo_url: null,
-                    national_id: "45678901",
-                    birth_certificate: null,
-                    date_of_birth: "2000-11-05T00:00:00.000Z",
-                    status: "inactive"
-                }
-            ];
-        }
+        
+        
         
         // Search students by name or registration number
         function searchStudents(query) {
