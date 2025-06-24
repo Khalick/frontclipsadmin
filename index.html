@@ -1680,6 +1680,14 @@
         // Form submission handlers
         async function handleFormSubmission(formId, url, method = 'POST', successMessage = 'Operation completed successfully') {
             const form = $(formId);
+            
+            // Check if form exists
+            if (!form) {
+                console.error(`Form with ID '${formId}' not found`);
+                showToast(`Form not found: ${formId}`, 'error');
+                return;
+            }
+            
             const formData = {};
               // Get form data
             const inputs = form.querySelectorAll('input');
@@ -2145,7 +2153,7 @@
                 if (formElement) {
                     formElement.addEventListener('submit', (e) => {
                         e.preventDefault();
-                        handleFormSubmission(form);
+                        handleFormSubmission(form.id, form.url, form.method || 'POST', form.message);
                     });
                 }
             });
