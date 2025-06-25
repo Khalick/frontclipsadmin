@@ -485,6 +485,12 @@
                         </div>
                         <div class="form-group">
                             <label for="unitsToAllocate"><i class="fas fa-list" style="margin-right: 6px;"></i>Select Units to Allocate</label>
+                            <div class="units-section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span style="font-size: 0.9rem; color: var(--text-secondary);">Available course units:</span>
+                                <button type="button" class="btn btn-outline" onclick="loadAvailableUnits()" style="padding: 6px 12px; font-size: 0.85rem;">
+                                    <i class="fas fa-sync-alt"></i> Refresh Units
+                                </button>
+                            </div>
                             <div id="unitsToAllocate" class="units-selection">
                                 <div class="loading-message">Loading available units...</div>
                             </div>
@@ -521,41 +527,6 @@
                     <div id="allocationsDisplay" class="allocations-display" style="display: none;">
                         <h4>Allocated Units</h4>
                         <div id="allocationsTable"></div>
-                    </div>
-                </div>
-
-                <!-- Unit Allocation Overview -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3><div class="card-icon"><i class="fas fa-chart-bar"></i></div>Allocation Overview</h3>
-                        <p>View all unit allocations system-wide</p>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="overviewSemester"><i class="fas fa-calendar-alt" style="margin-right: 6px;"></i>Filter by Semester</label>
-                            <select id="overviewSemester" class="input-field">
-                                <option value="">All Semesters</option>
-                                <option value="1">Semester 1</option>
-                                <option value="2">Semester 2</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="overviewStatus"><i class="fas fa-filter" style="margin-right: 6px;"></i>Filter by Status</label>
-                            <select id="overviewStatus" class="input-field">
-                                <option value="">All Statuses</option>
-                                <option value="allocated">Allocated (Pending Registration)</option>
-                                <option value="registered">Registered</option>
-                                <option value="cancelled">Cancelled</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button id="loadOverviewBtn" class="btn btn-secondary btn-full">
-                        <i class="fas fa-chart-bar" style="margin-right: 8px;"></i>
-                        <span class="btn-text">Load Overview</span>
-                    </button>
-                    <div id="overviewDisplay" class="overview-display" style="display: none;">
-                        <div id="overviewStats" class="overview-stats"></div>
-                        <div id="overviewTable"></div>
                     </div>
                 </div>
             </div>
@@ -701,21 +672,25 @@
                 // Clone the options to avoid modifying the original
                 const fetchOptions = { ...options };
                 
-                // Initialize headers
-                fetchOptions.headers = { ...options.headers } || {};
+                // Initialize headers - be careful with FormData
+                if (isFormData) {
+                    // For FormData, start with empty headers and only add auth
+                    fetchOptions.headers = {};
+                } else {
+                    // For other requests, preserve existing headers
+                    fetchOptions.headers = { ...options.headers } || {};
+                }
                 
                 // Add authorization token if available
                 if (token) {
                     fetchOptions.headers['Authorization'] = `Bearer ${token}`;
                 }
                 
-                // Accept JSON responses
-                fetchOptions.headers['Accept'] = 'application/json';
-                
                 // Handle different upload types
                 if (isFormData) {
                     // For FormData, DO NOT set Content-Type header - let the browser handle it with the proper boundary
-                    delete fetchOptions.headers['Content-Type'];
+                    // Accept JSON responses
+                    fetchOptions.headers['Accept'] = 'application/json';
                     
                     debugLog(`Sending FormData to ${url}`, {
                         fields: [...options.body.keys()],
@@ -732,7 +707,8 @@
                     });
                 } else if (isBinaryFile) {
                     // For binary file uploads, keep the Content-Type set by the caller
-                    // The Content-Type should already be set in the request options
+                    // Accept JSON responses
+                    fetchOptions.headers['Accept'] = 'application/json';
                     
                     debugLog(`Sending binary file to ${url}`, {
                         fileName: options.body.name,
@@ -741,9 +717,12 @@
                         method: options.method || 'GET',
                         contentType: fetchOptions.headers['Content-Type']
                     });
-                } else if (!fetchOptions.headers['Content-Type']) {
-                    // For non-file requests, set Content-Type to application/json if not set
-                    fetchOptions.headers['Content-Type'] = 'application/json';
+                } else {
+                    // For non-file requests, set standard headers
+                    fetchOptions.headers['Accept'] = 'application/json';
+                    if (!fetchOptions.headers['Content-Type']) {
+                        fetchOptions.headers['Content-Type'] = 'application/json';
+                    }
                 }
                 
                 const response = await fetch(`${API_BASE_URL}${url}`, fetchOptions);
@@ -1616,6 +1595,75 @@
                 showToast('An unexpected error occurred. Please try again.', 'error');
             }        }
 
+        // Display allocated units in the allocations table
+        function displayAllocatedUnits(data) {
+            const allocationsDisplay = $('allocationsDisplay');
+            const allocationsTable = $('allocationsTable');
+            
+            if (!allocationsDisplay || !allocationsTable) {
+                console.error('Allocations display elements not found');
+                return;
+            }
+            
+            if (!data.allocated_units || data.allocated_units.length === 0) {
+                allocationsTable.innerHTML = `
+                    <div class="table-empty">
+                        <i class="fas fa-info-circle"></i>
+                        <p>No units have been allocated to this student yet.</p>
+                    </div>
+                `;
+            } else {
+                // Build table HTML
+                let tableHTML = `
+                    <div class="table-wrapper">
+                        <table class="students-table">
+                            <thead>
+                                <tr>
+                                    <th>Unit Code</th>
+                                    <th>Unit Name</th>
+                                    <th>Semester</th>
+                                    <th>Academic Year</th>
+                                    <th>Status</th>
+                                    <th>Allocated Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                data.allocated_units.forEach(unit => {
+                    const statusClass = unit.status === 'allocated' ? 'status-active' : 
+                                       unit.status === 'registered' ? 'status-completed' :
+                                       unit.status === 'cancelled' ? 'status-inactive' : 'status-pending';
+                    
+                    const allocatedDate = unit.allocated_at ? 
+                        new Date(unit.allocated_at).toLocaleDateString() : 
+                        'N/A';
+                    
+                    tableHTML += `
+                        <tr>
+                            <td><strong>${unit.unit_code}</strong></td>
+                            <td>${unit.unit_name}</td>
+                            <td>Semester ${unit.semester}</td>
+                            <td>${unit.academic_year}</td>
+                            <td><span class="status-badge ${statusClass}">${unit.status}</span></td>
+                            <td>${allocatedDate}</td>
+                        </tr>
+                    `;
+                });
+                
+                tableHTML += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                allocationsTable.innerHTML = tableHTML;
+            }
+            
+            // Show the allocations display
+            allocationsDisplay.style.display = 'block';
+        }
+
         // Authentication functions
         async function adminLogin(event) {
             event.preventDefault();
@@ -1833,11 +1881,11 @@
                     }
                     
                     // Ensure properly formatted field names
-                    const regNumber = formData.examCardStudentReg.trim();
+                    const examCardRegNumber = formData.examCardStudentReg.trim();
                     const fileObj = examCardFile.files[0];
                     
                     // Verify we have valid data before proceeding
-                    if (!regNumber) {
+                    if (!examCardRegNumber) {
                         if (examCardStatusId) {
                             showStatus(examCardStatusId, 'Please enter a valid registration number', 'error');
                         } else {
@@ -1846,30 +1894,62 @@
                         return;
                     }
                     
-                    if (!fileObj || fileObj.size === 0) {
+                    // Verify file object is valid before creating FormData
+                    if (!fileObj || !fileObj.name || fileObj.size === 0) {
                         if (examCardStatusId) {
-                            showStatus(examCardStatusId, 'Please select a valid file', 'error');
+                            showStatus(examCardStatusId, 'Invalid file selected. Please try selecting the file again.', 'error');
                         } else {
-                            showToast('Please select a valid file', 'error');
+                            showToast('Invalid file selected. Please try selecting the file again.', 'error');
                         }
                         return;
                     }
                     
-                    // Use new unified endpoint with FormData
+                    // Additional file validation
+                    if (!fileObj.type && !fileObj.name.toLowerCase().endsWith('.pdf')) {
+                        if (examCardStatusId) {
+                            showStatus(examCardStatusId, 'File type could not be determined. Please ensure it is a PDF file.', 'error');
+                        } else {
+                            showToast('File type could not be determined. Please ensure it is a PDF file.', 'error');
+                        }
+                        return;
+                    }
+                    
+                    // Create FormData for exam card upload
                     url = '/exam-card';
                     payload = new FormData();
-                    payload.append('registrationNumber', regNumber);
+                    
+                    // Use exact field names expected by the backend API
+                    payload.append('registrationNumber', examCardRegNumber);
                     payload.append('file', fileObj);
                     
-                    // Log what we're sending
-                    debugLog('Exam card unified upload:', {
-                        registration_number: regNumber,
+                    // Additional debugging to inspect FormData before sending
+                    debugLog('FormData validation before send:', {
+                        registrationNumber: payload.get('registrationNumber'),
+                        fileExists: payload.get('file') instanceof File,
+                        fileName: payload.get('file')?.name,
+                        fileSize: payload.get('file')?.size,
+                        fileType: payload.get('file')?.type,
+                        formDataKeys: [...payload.keys()],
+                        formDataEntries: [...payload.entries()].map(([key, value]) => ({
+                            key,
+                            valueType: value instanceof File ? 'File' : typeof value,
+                            ...(value instanceof File ? { fileName: value.name, fileSize: value.size } : { value })
+                        }))
+                    });
+                    
+                    // Log what we're sending with more detail
+                    debugLog('Exam card upload details:', {
+                        registration_number: examCardRegNumber,
                         file_name: fileObj.name,
                         file_type: fileObj.type,
                         file_size: `${(fileObj.size / 1024).toFixed(2)} KB`,
                         upload_method: 'formdata',
                         endpoint: url,
-                        form_id: formId
+                        form_id: formId,
+                        field_names: ['registrationNumber', 'file'],
+                        file_has_name: !!fileObj.name,
+                        file_has_type: !!fileObj.type,
+                        file_is_pdf: fileObj.type === 'application/pdf' || fileObj.name.toLowerCase().endsWith('.pdf')
                     });
                     break;                case 'feesForm':
                     // Check if there's an optional fees statement file
@@ -2042,6 +2122,64 @@
                         endpoint: url
                     });
                     break;
+                case 'createUnitForm':
+                    payload = {
+                        unit_name: formData.createUnitName,
+                        unit_code: formData.createUnitCode
+                    };
+                    debugLog('Create unit payload:', payload);
+                    break;
+                case 'allocateUnitsForm':
+                    // Get selected unit IDs from the units selection checkboxes
+                    const selectedUnits = [];
+                    const unitCheckboxes = document.querySelectorAll('#unitsToAllocate input[type="checkbox"]:checked');
+                    unitCheckboxes.forEach(checkbox => {
+                        selectedUnits.push(parseInt(checkbox.value));
+                    });
+                    
+                    if (selectedUnits.length === 0) {
+                        showStatus(form.querySelector('.status-message').id, 'Please select at least one unit to allocate', 'error');
+                        return;
+                    }
+                    
+                    // Use the registration number-based endpoint
+                    url = `/students/registration/${formData.allocateStudentReg}/allocate-units`;
+                    
+                    payload = {
+                        unit_ids: selectedUnits,
+                        semester: parseInt(formData.allocateSemester),
+                        academic_year: formData.allocateAcademicYear,
+                        notes: formData.allocationNotes || ''
+                    };
+                    debugLog('Allocate units payload:', payload);
+                    break;
+                case 'viewAllocationsForm':
+                    // This case handles viewing allocations - we'll use GET method
+                    method = 'GET';
+                    
+                    // Handle registration numbers with slashes by parsing them
+                    const allocationsRegNumber = formData.viewAllocationsStudentReg.trim();
+                    if (allocationsRegNumber.includes('/')) {
+                        // Registration number has slashes, parse it
+                        const parts = allocationsRegNumber.split('/');
+                        if (parts.length >= 3) {
+                            // Format: course/number/year or course/section/number/year
+                            const course = encodeURIComponent(parts[0]);
+                            const number = encodeURIComponent(parts.slice(1, -1).join('/'));
+                            const year = encodeURIComponent(parts[parts.length - 1]);
+                            url = `/students/registration/${course}/${number}/${year}/allocated-units`;
+                        } else {
+                            // Fallback to simple format if parsing fails
+                            url = `/students/registration/${encodeURIComponent(allocationsRegNumber)}/allocated-units`;
+                        }
+                    } else {
+                        // Simple registration number without slashes
+                        url = `/students/registration/${encodeURIComponent(allocationsRegNumber)}/allocated-units`;
+                    }
+                    
+                    payload = null; // No payload needed for GET request
+                    debugLog('View allocations request:', { studentReg: allocationsRegNumber, url, parts: allocationsRegNumber.split('/') });
+                    break;
                 default:
                     payload = formData;
             }
@@ -2087,8 +2225,10 @@
                         contentType: payload.type || 'application/octet-stream'
                     });
                 } else {
-                    // FormData upload - let the browser set the Content-Type with boundary
+                    // FormData upload - DO NOT set Content-Type, let browser handle it
                     requestOptions.body = payload; // FormData object
+                    // Explicitly ensure no Content-Type header is set for FormData
+                    requestOptions.headers = {};
                     
                     // Log the FormData field names for debugging
                     const formDataFields = [...payload.keys()];
@@ -2103,17 +2243,27 @@
                     });
                 }
             } else {
-                // For JSON requests
-                requestOptions.body = JSON.stringify(payload);
-                requestOptions.headers = {
-                    'Content-Type': 'application/json'
-                };
-                
-                debugLog('Sending JSON request', {
-                    url,
-                    method,
-                    payload
-                });
+                // For JSON requests (but not GET requests)
+                if (method !== 'GET' && payload !== null) {
+                    requestOptions.body = JSON.stringify(payload);
+                    requestOptions.headers = {
+                        'Content-Type': 'application/json'
+                    };
+                    
+                    debugLog('Sending JSON request', {
+                        url,
+                        method,
+                        payload
+                    });
+                } else {
+                    // GET request or no payload
+                    requestOptions.headers = {};
+                    
+                    debugLog('Sending GET request', {
+                        url,
+                        method
+                    });
+                }
             }
             
             const result = await apiRequest(url, requestOptions);
@@ -2127,20 +2277,30 @@
             const statusElementId = statusMessageElement ? statusMessageElement.id : null;
             
             if (result.success) {
-                // Update student status based on form type
-                if (formId === 'grantLeaveForm' && payload.registration_number) {
-                    updateStudentStatus(payload.registration_number, 'on-leave');
-                } else if (formId === 'deregisterStudentForm' && formData.deregStudentReg) {
-                    updateStudentStatus(formData.deregStudentReg, 'inactive');
-                } else if (formId === 'readmitStudentForm' && formData.readmitStudentReg) {
-                    updateStudentStatus(formData.readmitStudentReg, 'active');
+                // Special handling for view allocations form
+                if (formId === 'viewAllocationsForm') {
+                    displayAllocatedUnits(result.data);
+                    if (statusElementId) {
+                        showStatus(statusElementId, `Found ${result.data.count} allocated units for ${result.data.student.name}`, 'success');
+                    }
+                    showToast(`Found ${result.data.count} allocated units for ${result.data.student.name}`);
+                    // Don't reset the form for view operations
+                } else {
+                    // Update student status based on form type
+                    if (formId === 'grantLeaveForm' && payload.registration_number) {
+                        updateStudentStatus(payload.registration_number, 'on-leave');
+                    } else if (formId === 'deregisterStudentForm' && formData.deregStudentReg) {
+                        updateStudentStatus(formData.deregStudentReg, 'inactive');
+                    } else if (formId === 'readmitStudentForm' && formData.readmitStudentReg) {
+                        updateStudentStatus(formData.readmitStudentReg, 'active');
+                    }
+                    
+                    if (statusElementId) {
+                        showStatus(statusElementId, result.data.message || successMessage, 'success');
+                    }
+                    showToast(result.data.message || successMessage);
+                    form.reset();
                 }
-                
-                if (statusElementId) {
-                    showStatus(statusElementId, result.data.message || successMessage, 'success');
-                }
-                showToast(result.data.message || successMessage);
-                form.reset();
             } else {
                 if (statusElementId) {
                     showStatus(statusElementId, result.error, 'error');
@@ -2195,13 +2355,15 @@
                 { id: 'registerUnitsForm', url: '/units/register', message: 'Unit registered successfully!' },
                 { id: 'promoteStudentForm', url: '/students/promote', message: 'Student promoted successfully!' },
                 { id: 'readmitStudentForm', url: '/students/readmit', message: 'Student readmitted successfully!' },
-                { id: 'examCardForm', url: '/exam-cards', message: 'Exam card uploaded successfully!' },
+                { id: 'examCardForm', url: '/exam-card', message: 'Exam card uploaded successfully!' },
                 { id: 'feesForm', url: '/fees', message: 'Fees updated successfully!' },
                 { id: 'financeForm', url: '/finance', message: 'Finance document uploaded successfully!' },
                 { id: 'resultsForm', url: '/results', message: 'Results uploaded successfully!' },
                 { id: 'timetableForm', url: '/timetable', message: 'Timetable uploaded successfully!' },
                 { id: 'createUnitForm', url: '/units', message: 'Unit created successfully!' },
-                { id: 'allocateUnitsForm', url: '/allocated-units', message: 'Units allocated successfully!' }            ];
+                { id: 'allocateUnitsForm', url: '', message: 'Units allocated successfully!' }, // URL handled dynamically
+                { id: 'viewAllocationsForm', url: '', method: 'GET', message: 'Allocations loaded successfully!' } // URL handled dynamically
+            ];
 
             // Bind forms to their respective handlers
             forms.forEach(form => {
@@ -2370,6 +2532,104 @@
                     this.setCustomValidity('');
                 }            });
         }
+
+        // Load available units for allocation
+        async function loadAvailableUnits() {
+            const unitsContainer = document.getElementById('unitsToAllocate');
+            if (!unitsContainer) return;
+
+            try {
+                // Show loading state
+                unitsContainer.innerHTML = '<div class="loading-message"><i class="fas fa-spinner fa-spin"></i> Loading available units...</div>';
+                
+                const result = await apiRequest('/units');
+                
+                if (result.success && result.data && Array.isArray(result.data)) {
+                    const units = result.data;
+                    
+                    if (units.length === 0) {
+                        unitsContainer.innerHTML = `
+                            <div class="no-units-message">
+                                <i class="fas fa-info-circle"></i>
+                                <p>No units available. Create units first before allocating them to students.</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    // Create checkboxes for each unit
+                    const unitsHTML = units.map(unit => `
+                        <div class="unit-checkbox-item">
+                            <label class="unit-checkbox-label">
+                                <input type="checkbox" value="${unit.id}" data-unit-code="${unit.unit_code}" data-unit-name="${unit.unit_name}">
+                                <span class="unit-info">
+                                    <strong>${unit.unit_code}</strong> - ${unit.unit_name}
+                                </span>
+                            </label>
+                        </div>
+                    `).join('');
+                    
+                    unitsContainer.innerHTML = `
+                        <div class="units-selection-container">
+                            <div class="units-selection-header">
+                                <span>Select units to allocate to the student:</span>
+                                <div class="units-selection-actions">
+                                    <button type="button" class="btn-link" onclick="selectAllUnits()">Select All</button>
+                                    <button type="button" class="btn-link" onclick="clearAllUnits()">Clear All</button>
+                                </div>
+                            </div>
+                            <div class="units-checkbox-list">
+                                ${unitsHTML}
+                            </div>
+                        </div>
+                    `;
+                    
+                    debugLog('Available units loaded:', {
+                        count: units.length,
+                        units: units.map(u => ({ code: u.unit_code, name: u.unit_name }))
+                    });
+                } else {
+                    console.warn('Failed to load units:', result.error);
+                    unitsContainer.innerHTML = `
+                        <div class="error-message">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>Failed to load available units. Please try refreshing the page.</p>
+                            <button type="button" class="btn btn-outline" onclick="loadAvailableUnits()">
+                                <i class="fas fa-retry"></i> Retry
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading units:', error);
+                unitsContainer.innerHTML = `
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Error loading units: ${error.message}</p>
+                        <button type="button" class="btn btn-outline" onclick="loadAvailableUnits()">
+                            <i class="fas fa-retry"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // Helper functions for unit selection
+        function selectAllUnits() {
+            const checkboxes = document.querySelectorAll('#unitsToAllocate input[type="checkbox"]');
+            checkboxes.forEach(checkbox => checkbox.checked = true);
+        }
+
+        function clearAllUnits() {
+            const checkboxes = document.querySelectorAll('#unitsToAllocate input[type="checkbox"]');
+            checkboxes.forEach(checkbox => checkbox.checked = false);
+        }
+
+        // Load units when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load available units for allocation
+            loadAvailableUnits();
+        });
         </script>
   
 </body>
