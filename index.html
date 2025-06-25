@@ -2134,7 +2134,10 @@
                     const selectedUnits = [];
                     const unitCheckboxes = document.querySelectorAll('#unitsToAllocate input[type="checkbox"]:checked');
                     unitCheckboxes.forEach(checkbox => {
-                        selectedUnits.push(parseInt(checkbox.value));
+                        const unitId = parseInt(checkbox.value);
+                        if (!isNaN(unitId)) {
+                            selectedUnits.push(unitId);
+                        }
                     });
                     
                     if (selectedUnits.length === 0) {
@@ -2142,16 +2145,33 @@
                         return;
                     }
                     
-                    // Use the registration number-based endpoint
-                    url = `/students/registration/${formData.allocateStudentReg}/allocate-units`;
+                    // Validate other required fields
+                    if (!formData.allocateStudentReg || !formData.allocateSemester || !formData.allocateAcademicYear) {
+                        showStatus(form.querySelector('.status-message').id, 'Please fill in all required fields', 'error');
+                        return;
+                    }
                     
+                    // Use the registration number-based endpoint
+                    url = `/students/registration/${encodeURIComponent(formData.allocateStudentReg.trim())}/allocate-units`;
+                    
+                    // Create a more robust payload structure
                     payload = {
                         unit_ids: selectedUnits,
                         semester: parseInt(formData.allocateSemester),
-                        academic_year: formData.allocateAcademicYear,
-                        notes: formData.allocationNotes || ''
+                        academic_year: formData.allocateAcademicYear.trim(),
+                        notes: formData.allocationNotes ? formData.allocationNotes.trim() : '',
+                        // Additional fields that might be expected
+                        student_registration: formData.allocateStudentReg.trim(),
+                        allocation_type: 'semester'
                     };
-                    debugLog('Allocate units payload:', payload);
+                    
+                    debugLog('Allocate units payload:', {
+                        ...payload,
+                        selectedUnitsCount: selectedUnits.length,
+                        registrationNumber: formData.allocateStudentReg.trim(),
+                        endpoint: url,
+                        unitIds: selectedUnits
+                    });
                     break;
                 case 'viewAllocationsForm':
                     // This case handles viewing allocations - we'll use GET method
