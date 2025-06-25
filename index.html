@@ -59,6 +59,36 @@
                     <button onclick="logout()" class="btn btn-outline"><i class="fas fa-sign-out-alt" style="margin-right: 8px;"></i>Logout</button>
                 </div>
             </div>
+            
+            <!-- Debug Panel for Production Issues -->
+            <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-left: 4px solid var(--secondary-color);">
+                <div class="card-header">
+                    <h3><div class="card-icon"><i class="fas fa-tools"></i></div>System Status</h3>
+                    <p>API connection and environment information</p>
+                </div>
+                <div style="padding: 20px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <strong>Environment:</strong> 
+                            <span id="envStatus" style="margin-left: 8px; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;"></span>
+                        </div>
+                        <div>
+                            <strong>API URL:</strong> 
+                            <code id="apiUrlDisplay" style="background: #f1f3f4; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;"></code>
+                        </div>
+                        <div>
+                            <strong>Protocol:</strong> 
+                            <span id="protocolStatus" style="margin-left: 8px; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;"></span>
+                        </div>
+                    </div>
+                    <button onclick="testApiConnection()" class="btn btn-outline" style="margin-right: 10px;">
+                        <i class="fas fa-wifi"></i> Test API Connection
+                    </button>
+                    <button onclick="debugLog('Current configuration', { apiUrl: API_BASE_URL, hostname: window.location.hostname, protocol: window.location.protocol })" class="btn btn-outline">
+                        <i class="fas fa-bug"></i> Log Debug Info
+                    </button>
+                </div>
+            </div>
 
             <div class="admin-actions">
                 <!-- Register Student -->
@@ -533,10 +563,24 @@
         </div>
     </div>
     <script>
-        // Constants
-        const API_BASE_URL = 'https://clipscollegebackend.vercel.app' // Uses current server origin
+        // Constants - Environment-aware API configuration
+        const getApiBaseUrl = () => {
+            // Check if we're in development (localhost)
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return 'http://localhost:3000';
+            }
+            
+            // For production, use the deployed backend URL
+            // Update this URL to match your deployed backend
+            return 'https://clipscollegebackend.vercel.app';
+        };
+        
+        const API_BASE_URL = getApiBaseUrl();
         const ADMIN_TOKEN_KEY = 'adminToken';
         const ADMIN_DATA_KEY = 'adminData';
+        
+        // Log the current API URL for debugging
+        console.log('Using API Base URL:', API_BASE_URL);
 
         // Utility functions
         const showElement = (element) => element.style.display = 'block';
@@ -809,8 +853,21 @@
                 if (error.message.includes('FormData')) {
                     console.log('FormData parsing error details:', error);
                     errorMessage = 'Error with file upload format. Please try again with a different file or contact support.';
-                } else if (error.message.includes('Failed to fetch')) {
-                    errorMessage = 'Network error. Please check your connection.';
+                } else if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+                    // This often indicates CORS issues in production
+                    console.error('Network/CORS error details:', { 
+                        apiUrl: API_BASE_URL, 
+                        currentUrl: window.location.origin,
+                        error: error.message 
+                    });
+                    
+                    if (API_BASE_URL.includes('localhost') && !window.location.hostname.includes('localhost')) {
+                        errorMessage = 'Configuration error: Cannot connect to localhost from production. Please check the API configuration.';
+                    } else if (window.location.protocol === 'https:' && API_BASE_URL.startsWith('http:')) {
+                        errorMessage = 'Security error: Cannot make HTTP requests from HTTPS site. The API must use HTTPS.';
+                    } else {
+                        errorMessage = 'Network error. Please check your connection and ensure the server is running.';
+                    }
                 } else if (error.message.includes('500')) {
                     errorMessage = 'Server error. The operation could not be completed. The server team has been notified.';
                 } else if (error.message.includes('400') && options.body instanceof FormData) {
@@ -822,6 +879,8 @@
                     errorMessage = 'Authentication error. Please log in again.';
                     // If authentication error, clear token
                     localStorage.removeItem(ADMIN_TOKEN_KEY);
+                } else if (error.message.includes('CORS')) {
+                    errorMessage = 'Cross-origin request blocked. Please contact support to resolve server configuration.';
                 }
                 
                 return { 
@@ -830,7 +889,46 @@
                     originalError: error.message
                 };
             }
-        }        // Student management functions
+        }        // Connection test function for debugging production issues
+        async function testApiConnection() {
+            debugLog('Testing API connection...', { url: API_BASE_URL });
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    debugLog('API connection successful', data);
+                    showToast('API connection successful', 'success');
+                    return true;
+                } else {
+                    debugLog('API connection failed', { status: response.status, statusText: response.statusText });
+                    showToast(`API connection failed: ${response.status} ${response.statusText}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                debugLog('API connection error', error);
+                showToast(`API connection error: ${error.message}`, 'error');
+                
+                // Provide specific guidance based on error type
+                if (error.message.includes('Failed to fetch')) {
+                    console.error('Possible CORS or network connectivity issue. Check:');
+                    console.error('1. Is the backend server running?');
+                    console.error('2. Are CORS headers properly configured on the backend?');
+                    console.error('3. Is the API URL correct?', API_BASE_URL);
+                    console.error('4. If using HTTPS frontend, ensure backend also uses HTTPS');
+                }
+                
+                return false;
+            }
+        }
+
+        // Student management functions
         async function fetchStudents() {
             // Show loading state
             const tableContainer = $('studentsTableContainer');
@@ -1720,8 +1818,48 @@
                 $('adminName').textContent = adminData.username;
             }
             
+            // Update debug panel information
+            updateDebugPanel();
+            
             // Fetch students data when dashboard is shown
             fetchStudents();
+        }
+        
+        // Update debug panel with current environment information
+        function updateDebugPanel() {
+            const envStatusEl = $('envStatus');
+            const apiUrlEl = $('apiUrlDisplay');
+            const protocolStatusEl = $('protocolStatus');
+            
+            if (envStatusEl) {
+                const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                envStatusEl.textContent = isLocal ? 'Development' : 'Production';
+                envStatusEl.style.background = isLocal ? '#e3f2fd' : '#fff3e0';
+                envStatusEl.style.color = isLocal ? '#1976d2' : '#f57c00';
+            }
+            
+            if (apiUrlEl) {
+                apiUrlEl.textContent = API_BASE_URL;
+            }
+            
+            if (protocolStatusEl) {
+                const isHttps = window.location.protocol === 'https:';
+                const apiIsHttps = API_BASE_URL.startsWith('https:');
+                
+                if (isHttps && !apiIsHttps) {
+                    protocolStatusEl.textContent = 'Mixed Content Issue';
+                    protocolStatusEl.style.background = '#ffebee';
+                    protocolStatusEl.style.color = '#d32f2f';
+                } else if (isHttps && apiIsHttps) {
+                    protocolStatusEl.textContent = 'Secure (HTTPS)';
+                    protocolStatusEl.style.background = '#e8f5e8';
+                    protocolStatusEl.style.color = '#2e7d32';
+                } else {
+                    protocolStatusEl.textContent = 'HTTP';
+                    protocolStatusEl.style.background = '#f3e5f5';
+                    protocolStatusEl.style.color = '#7b1fa2';
+                }
+            }
         }
 
         function showLogin() {
@@ -2336,6 +2474,9 @@
                 document.body.classList.add('auto-dark-mode');
             }
             
+            // Test API connection first (especially important for production)
+            testApiConnection();
+            
             // Setup file preview for exam card uploads
             setupExamCardFilePreview();
             
@@ -2540,7 +2681,7 @@
                         `;
                         
                         // Set custom validity to prevent form submission
-                        this.setCustomValidity('File size must be less than 5MB.');
+                        this.setCustomValidity('File size must be less than 5MB');
                     }
                     
                     // If no errors, clear custom validity
@@ -2650,7 +2791,7 @@
             // Load available units for allocation
             loadAvailableUnits();
         });
-        </script>
+    </script>
   
 </body>
 </html>
