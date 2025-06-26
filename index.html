@@ -563,15 +563,9 @@
         </div>
     </div>
     <script>
-        // Constants - Environment-aware API configuration
+        // Constants - Unified API configuration for all environments
         const getApiBaseUrl = () => {
-            // Check if we're in development (localhost)
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                return 'http://localhost:3000';
-            }
-            
-            // For production, use the deployed backend URL
-            // Update this URL to match your deployed backend
+            // Use the same production URL for both development and production
             return 'https://clipscollegebackend.vercel.app';
         };
         
@@ -2054,41 +2048,64 @@
                     
                     // Create FormData for exam card upload
                     url = '/exam-card';
-                    payload = new FormData();
                     
-                    // Use exact field names expected by the backend API
-                    payload.append('registrationNumber', examCardRegNumber);
-                    payload.append('file', fileObj);
-                    
-                    // Additional debugging to inspect FormData before sending
-                    debugLog('FormData validation before send:', {
-                        registrationNumber: payload.get('registrationNumber'),
-                        fileExists: payload.get('file') instanceof File,
-                        fileName: payload.get('file')?.name,
-                        fileSize: payload.get('file')?.size,
-                        fileType: payload.get('file')?.type,
-                        formDataKeys: [...payload.keys()],
-                        formDataEntries: [...payload.entries()].map(([key, value]) => ({
-                            key,
-                            valueType: value instanceof File ? 'File' : typeof value,
-                            ...(value instanceof File ? { fileName: value.name, fileSize: value.size } : { value })
-                        }))
-                    });
-                    
-                    // Log what we're sending with more detail
-                    debugLog('Exam card upload details:', {
-                        registration_number: examCardRegNumber,
-                        file_name: fileObj.name,
-                        file_type: fileObj.type,
-                        file_size: `${(fileObj.size / 1024).toFixed(2)} KB`,
-                        upload_method: 'formdata',
-                        endpoint: url,
-                        form_id: formId,
-                        field_names: ['registrationNumber', 'file'],
-                        file_has_name: !!fileObj.name,
-                        file_has_type: !!fileObj.type,
-                        file_is_pdf: fileObj.type === 'application/pdf' || fileObj.name.toLowerCase().endsWith('.pdf')
-                    });
+                    try {
+                        payload = new FormData();
+                        
+                        // Use exact field names expected by the backend API
+                        // Try 'registration_number' instead of 'registrationNumber' to match typical backend conventions
+                        payload.append('registration_number', examCardRegNumber);
+                        payload.append('file', fileObj, fileObj.name);
+                        
+                        // Verify FormData was created successfully
+                        const formDataKeys = [...payload.keys()];
+                        const hasRegistration = payload.has('registration_number');
+                        const hasFile = payload.has('file');
+                        const fileValue = payload.get('file');
+                        
+                        if (!hasRegistration || !hasFile || !(fileValue instanceof File)) {
+                            throw new Error('FormData creation validation failed');
+                        }
+                        
+                        // Additional debugging to inspect FormData before sending
+                        debugLog('FormData validation before send:', {
+                            registration_number: payload.get('registration_number'),
+                            fileExists: payload.get('file') instanceof File,
+                            fileName: payload.get('file')?.name,
+                            fileSize: payload.get('file')?.size,
+                            fileType: payload.get('file')?.type,
+                            formDataKeys: formDataKeys,
+                            formDataEntries: [...payload.entries()].map(([key, value]) => ({
+                                key,
+                                valueType: value instanceof File ? 'File' : typeof value,
+                                ...(value instanceof File ? { fileName: value.name, fileSize: value.size } : { value })
+                            }))
+                        });
+                        
+                        // Log what we're sending with more detail
+                        debugLog('Exam card upload details:', {
+                            registration_number: examCardRegNumber,
+                            file_name: fileObj.name,
+                            file_type: fileObj.type,
+                            file_size: `${(fileObj.size / 1024).toFixed(2)} KB`,
+                            upload_method: 'formdata',
+                            endpoint: url,
+                            form_id: formId,
+                            field_names: formDataKeys,
+                            file_has_name: !!fileObj.name,
+                            file_has_type: !!fileObj.type,
+                            file_is_pdf: fileObj.type === 'application/pdf' || fileObj.name.toLowerCase().endsWith('.pdf')
+                        });
+                        
+                    } catch (formDataError) {
+                        console.error('Error creating FormData for exam card:', formDataError);
+                        if (examCardStatusId) {
+                            showStatus(examCardStatusId, 'Error preparing file upload: ' + formDataError.message, 'error');
+                        } else {
+                            showToast('Error preparing file upload: ' + formDataError.message, 'error');
+                        }
+                        return;
+                    }
                     break;                case 'feesForm':
                     // Check if there's an optional fees statement file
                     const feesStatementFile = $('feesStatementFile');
@@ -2130,7 +2147,7 @@
                     }
                     
                     debugLog('Fees update payload:', payload);
-                    break;case 'financeForm':
+                    break;                case 'financeForm':
                     isFileUpload = true;
                     
                     // Validate the file
@@ -2140,22 +2157,48 @@
                         return;
                     }
                     
+                    // Validate registration number
+                    if (!formData.financeStudentReg || !formData.financeStudentReg.trim()) {
+                        showStatus(form.querySelector('.status-message').id, 'Please enter a registration number', 'error');
+                        return;
+                    }
+                    
+                    // Validate document type selection
+                    if (!formData.documentType) {
+                        showStatus(form.querySelector('.status-message').id, 'Please select a document type', 'error');
+                        return;
+                    }
+                    
+                    const financeFileObj = financeFile.files[0];
+                    
+                    // Enhanced file validation
+                    if (!financeFileObj) {
+                        showStatus(form.querySelector('.status-message').id, 'No file selected', 'error');
+                        return;
+                    }
+                    
                     // Validate file type - only PDF allowed
-                    const financeFileType = financeFile.files[0].type;
-                    if (financeFileType !== 'application/pdf' && !financeFile.files[0].name.toLowerCase().endsWith('.pdf')) {
+                    const financeFileType = financeFileObj.type;
+                    const fileName = financeFileObj.name.toLowerCase();
+                    if (financeFileType !== 'application/pdf' && !fileName.endsWith('.pdf')) {
                         showStatus(form.querySelector('.status-message').id, 'Please upload a PDF file only', 'error');
                         return;
                     }
                     
                     // Validate file size (max 5MB)
                     const financeMaxSize = 5 * 1024 * 1024; // 5MB
-                    if (financeFile.files[0].size > financeMaxSize) {
+                    if (financeFileObj.size > financeMaxSize) {
                         showStatus(form.querySelector('.status-message').id, 'File size should be less than 5MB', 'error');
                         return;
                     }
                     
-                    const financeFileObj = financeFile.files[0];
-                      // Map document type to unified endpoint
+                    // Validate file is not corrupted (basic check)
+                    if (financeFileObj.size === 0) {
+                        showStatus(form.querySelector('.status-message').id, 'File appears to be empty or corrupted', 'error');
+                        return;
+                    }
+                    
+                    // Map document type to unified endpoint
                     if (formData.documentType === 'statement') {
                         url = '/fees-statement';
                     } else if (formData.documentType === 'receipt') {
@@ -2165,20 +2208,57 @@
                         return;
                     }
                     
-                    // Use new unified endpoint with FormData
-                    payload = new FormData();
-                    payload.append('registrationNumber', formData.financeStudentReg.trim());
-                    payload.append('file', financeFileObj);
-                    
-                    debugLog('Finance unified upload:', {
-                        registration_number: formData.financeStudentReg,
-                        document_type: formData.documentType,
-                        file_name: financeFileObj.name,
-                        file_type: financeFileObj.type,
-                        file_size: `${(financeFileObj.size / 1024).toFixed(2)} KB`,
-                        upload_method: 'formdata',
-                        endpoint: url
-                    });
+                    // Create FormData with enhanced validation and logging
+                    try {
+                        payload = new FormData();
+                        
+                        // Add fields with validation
+                        const regNumber = formData.financeStudentReg.trim();
+                        if (regNumber) {
+                            payload.append('registrationNumber', regNumber);
+                        } else {
+                            throw new Error('Registration number is required');
+                        }
+                        
+                        // Add the file with validation
+                        if (financeFileObj instanceof File) {
+                            payload.append('file', financeFileObj, financeFileObj.name);
+                        } else {
+                            throw new Error('Invalid file object');
+                        }
+                        
+                        // Add document type for backend processing
+                        payload.append('documentType', formData.documentType);
+                        
+                        // Verify FormData was created correctly
+                        const formDataEntries = [...payload.entries()];
+                        debugLog('Finance FormData entries:', formDataEntries.map(([key, value]) => ({
+                            key,
+                            value: value instanceof File ? {
+                                name: value.name,
+                                type: value.type,
+                                size: value.size,
+                                lastModified: value.lastModified
+                            } : value
+                        })));
+                        
+                        debugLog('Finance unified upload:', {
+                            registration_number: regNumber,
+                            document_type: formData.documentType,
+                            file_name: financeFileObj.name,
+                            file_type: financeFileObj.type,
+                            file_size: `${(financeFileObj.size / 1024).toFixed(2)} KB`,
+                            upload_method: 'formdata',
+                            endpoint: url,
+                            formdata_fields: formDataEntries.length,
+                            has_file_field: formDataEntries.some(([key, value]) => value instanceof File)
+                        });
+                        
+                    } catch (formDataError) {
+                        console.error('Error creating FormData:', formDataError);
+                        showStatus(form.querySelector('.status-message').id, 'Error preparing file upload: ' + formDataError.message, 'error');
+                        return;
+                    }
                     break;case 'resultsForm':
                     isFileUpload = true;
                     
